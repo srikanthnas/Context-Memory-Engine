@@ -12,6 +12,7 @@ from memory.message_memory import MessageMemory
 from memory.preference_memory import PreferenceMemory
 from memory.context_builder import ContextBuilder
 from memory.context_optimizer import ContextOptimizer
+from memory.document_memory import DocumentMemory
 
 
 class MemoryEngine:
@@ -24,6 +25,7 @@ class MemoryEngine:
         self.preference_memory = PreferenceMemory()
         self.context_builder = ContextBuilder()
         self.context_optimizer = ContextOptimizer()
+        self.document_memory = DocumentMemory()
 
     def process_prompt(
         self,
@@ -48,6 +50,10 @@ class MemoryEngine:
             db=db,
             user_id=user_id,
         )
+        documents = self.document_memory.get_documents(
+            db=db,
+            user_id=user_id,
+        )
 
         # Retrieve latest messages from the newest conversation
         latest_messages = []
@@ -63,6 +69,7 @@ class MemoryEngine:
             conversations=conversations,
             messages=latest_messages,
             preferences=preferences,
+            documents=documents,
         )
 
         # Build final LLM context
@@ -71,6 +78,7 @@ class MemoryEngine:
             preferences=optimized_memory["preferences"],
             conversations=optimized_memory["conversations"],
             messages=optimized_memory["messages"],
+            documents=optimized_memory["documents"],
         )
 
         return {
@@ -78,6 +86,7 @@ class MemoryEngine:
             "conversation_memory": conversations,
             "message_memory": latest_messages,
             "preference_memory": preferences,
+            "document_memory": documents,
             "optimized_memory": optimized_memory,
             "context": context,
         }

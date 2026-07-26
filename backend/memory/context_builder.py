@@ -5,11 +5,12 @@ class ContextBuilder:
 
     @staticmethod
     def build(
-        prompt: dict,
-        preferences: list,
-        conversations: list,
-        messages: list,
-    ) -> str:
+        prompt,
+        preferences,
+        conversations,
+        messages,
+        documents,
+    ):
 
         context = []
 
@@ -43,6 +44,19 @@ class ContextBuilder:
                 context.append(
                     f"{message['role'].capitalize()}: {message['content']}"
                 )
+        else:
+            context.append("- None")
+
+        context.append("")
+        context.append("Relevant Documents:")
+
+        if documents:
+            for document in documents:
+                context.append(f"- {document['filename']}:")
+
+                for chunk in document.get("chunks", [])[:2]:
+                    context.append(f"  {chunk}")
+
         else:
             context.append("- None")
 
