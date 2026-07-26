@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from database.base import Base
 from database.connection import engine
+from api.routes import preferences
 
 # Import models so SQLAlchemy creates the tables
 import database.models
@@ -30,6 +31,7 @@ app.include_router(conversations.router)
 app.include_router(messages.router)
 app.include_router(documents.router)
 app.include_router(memory.router)
+app.include_router(preferences.router)
 
 
 @app.get("/")

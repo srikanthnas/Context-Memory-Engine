@@ -1,20 +1,20 @@
 class ContextOptimizer:
     """
-    Optimizes memory before sending it to an LLM.
+    Optimizes memory before context construction.
     """
 
     @staticmethod
     def optimize(
         conversations: list,
         messages: list,
-        max_conversations: int = 3,
-        max_messages: int = 5,
+        preferences: list,
     ):
-        optimized_conversations = conversations[:max_conversations]
-
-        optimized_messages = messages[-max_messages:]
+        optimized_conversations = conversations[:3]
+        optimized_messages = messages[-5:]
+        optimized_preferences = preferences
 
         return {
             "conversations": optimized_conversations,
             "messages": optimized_messages,
+            "preferences": optimized_preferences,
         }
