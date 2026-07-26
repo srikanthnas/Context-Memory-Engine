@@ -1,10 +1,25 @@
+from database.connection import SessionLocal
 from memory.memory_engine import MemoryEngine
 
-engine = MemoryEngine()
 
-result = engine.process_prompt(
-    user_id=1,
-    prompt="   What is Machine Learning?   "
-)
+def main():
+    db = SessionLocal()
 
-print(result)
+    try:
+        engine = MemoryEngine()
+
+        result = engine.process_prompt(
+            db=db,
+            user_id=1,
+            prompt="What did we talk about before?"
+        )
+
+        print("\n===== MEMORY ENGINE OUTPUT =====")
+        print(result)
+
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,29 +1,19 @@
-"""
-Conversation Memory
-
-Responsible for retrieving conversation history
-from the database.
-"""
-
 from sqlalchemy.orm import Session
 
 from database.models import Conversation
 
 
 class ConversationMemory:
-    """Conversation retrieval service."""
+    """
+    Retrieves previous conversations for a user.
+    """
 
+    @staticmethod
     def get_recent_conversations(
-        self,
         db: Session,
         user_id: int,
         limit: int = 5,
     ):
-        """
-        Return the most recent conversations
-        for the given user.
-        """
-
         conversations = (
             db.query(Conversation)
             .filter(Conversation.user_id == user_id)
@@ -34,7 +24,7 @@ class ConversationMemory:
 
         return [
             {
-                "conversation_id": conversation.id,
+                "id": conversation.id,
                 "title": conversation.title,
                 "created_at": conversation.created_at.isoformat(),
             }
