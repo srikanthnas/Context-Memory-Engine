@@ -26,6 +26,15 @@ class DocumentMemory:
             .filter(Document.user_id == user_id)
             .all()
         )
+        print(f"Found {len(documents)} document(s) for user {user_id}")
+
+        for doc in documents:
+            print(
+                f"id={doc.id}, "
+                f"user_id={doc.user_id}, "
+                f"filename={doc.filename}, "
+                f"filepath={doc.filepath}"
+            )
 
         results = []
 
@@ -45,8 +54,8 @@ class DocumentMemory:
                     }
                 )
 
-            except Exception:
-                # Skip unreadable or unsupported documents
-                continue
+            except Exception as e:
+                print(f"Error processing {document.filename}: {e}")
+                raise
 
         return results

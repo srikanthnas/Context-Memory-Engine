@@ -1,18 +1,14 @@
-from pathlib import Path
+from document_processing.parsers.parser_factory import ParserFactory
 
 
 class TextExtractor:
     """
-    Extracts text from supported document types.
+    Delegates extraction to the appropriate parser.
     """
 
     @staticmethod
     def extract(file_path: str) -> str:
 
-        extension = Path(file_path).suffix.lower()
+        parser = ParserFactory.get_parser(file_path)
 
-        if extension == ".txt":
-            with open(file_path, "r", encoding="utf-8") as file:
-                return file.read()
-
-        raise ValueError(f"Unsupported file type: {extension}")
+        return parser.extract_text(file_path)
