@@ -10,6 +10,7 @@ from memory.prompt_manager import PromptManager
 from memory.conversation_memory import ConversationMemory
 from memory.message_memory import MessageMemory
 from memory.context_builder import ContextBuilder
+from memory.context_optimizer import ContextOptimizer
 
 
 class MemoryEngine:
@@ -20,6 +21,7 @@ class MemoryEngine:
         self.conversation_memory = ConversationMemory()
         self.message_memory = MessageMemory()
         self.context_builder = ContextBuilder()
+        self.context_optimizer = ContextOptimizer()
 
     def process_prompt(
         self,
@@ -45,15 +47,21 @@ class MemoryEngine:
                 conversation_id=conversations[0]["id"],
             )
 
+        optimized_memory = self.context_optimizer.optimize(
+        conversations=conversations,
+        messages=latest_messages,
+    )
+
         context = self.context_builder.build(
-            prompt=prepared_prompt,
-            conversations=conversations,
-            messages=latest_messages,
+        prompt=prepared_prompt,
+        conversations=optimized_memory["conversations"],
+        messages=optimized_memory["messages"],
         )
 
         return {
             "prompt": prepared_prompt,
             "conversation_memory": conversations,
             "message_memory": latest_messages,
+            "optimized_memory": optimized_memory,
             "context": context,
         }
