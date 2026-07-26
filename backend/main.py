@@ -10,6 +10,7 @@ import database.models
 from api.routes import (
     users,
     conversations,
+    messages,
     documents,
     memory,
 )
@@ -26,6 +27,7 @@ app = FastAPI(
 # Register routers
 app.include_router(users.router)
 app.include_router(conversations.router)
+app.include_router(messages.router)
 app.include_router(documents.router)
 app.include_router(memory.router)
 
