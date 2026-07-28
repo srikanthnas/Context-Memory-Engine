@@ -1,5 +1,5 @@
 from embeddings.embedding_manager import EmbeddingManager
-from retrieval.vector_store import VectorStore
+from backend.retrieval.vector_store_faiss import VectorStore
 
 
 manager = EmbeddingManager()
@@ -33,4 +33,3 @@ print("\nTop Results")
 
 for rank, idx in enumerate(indices):
     print(f"{rank+1}. {documents[idx]}")
-    

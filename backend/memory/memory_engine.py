@@ -53,6 +53,7 @@ class MemoryEngine:
         documents = self.document_memory.get_documents(
             db=db,
             user_id=user_id,
+            query=prepared_prompt,
         )
 
         # Retrieve latest messages from the newest conversation

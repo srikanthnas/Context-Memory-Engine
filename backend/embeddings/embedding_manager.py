@@ -19,6 +19,7 @@ class EmbeddingManager:
             self,
             chunks,
             document_id=None,
+            user_id=None,
             filename=None
         ):
             """
@@ -36,6 +37,7 @@ class EmbeddingManager:
                         "embedding": embedding,
                         "metadata": {
                             "document_id": document_id,
+                            "user_id": user_id,
                             "filename": filename,
                             "chunk_index": index,
                         },

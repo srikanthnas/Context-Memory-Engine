@@ -1,5 +1,4 @@
 import chromadb
-from chromadb.config import Settings
 import uuid
 
 
@@ -9,9 +8,9 @@ class ChromaVectorStore:
     """
 
     def __init__(self):
-        self.client = chromadb.Client(
-            Settings(anonymized_telemetry=False)
-        )
+        self.client = chromadb.PersistentClient(
+        path="./chroma_db"
+    )
 
         self.collection = self.client.get_or_create_collection(
             name="document_memory"
@@ -40,13 +39,14 @@ class ChromaVectorStore:
             ],
         )
 
-    def search(self, query_embedding, top_k=3):
-
+    def search(self, query_embedding, top_k=3, where=None):
         results = self.collection.query(
             query_embeddings=[query_embedding.tolist()],
             n_results=top_k,
+            where=where,
         )
 
+    
         return results
 
     def size(self):

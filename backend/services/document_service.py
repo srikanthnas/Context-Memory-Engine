@@ -50,6 +50,7 @@ class DocumentService:
             embedded_chunks = embedding_manager.embed_document_chunks(
                 chunks,
                 document_id=document.id,
+                user_id=document.user_id,
                 filename=document.filename,
             )
 
