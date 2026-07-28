@@ -1,12 +1,16 @@
 """
 Unified Context Manager
 
-Ranks and combines memories from different sources.
+Combines memories from all memory sources into a single ranked list.
 """
-from memory.memory_scorer import MemoryScorer
+
+from memory.memory_ranker import MemoryRanker
 
 
 class UnifiedContextManager:
+    """
+    Builds a unified ranked memory list.
+    """
 
     def build(
         self,
@@ -16,47 +20,81 @@ class UnifiedContextManager:
         documents,
     ):
 
-        memories = []
+        unified_memory = []
 
-        for conversation in conversations:
-            memories.append(
-                {
-                    "type": "conversation",
-                    "score": MemoryScorer.score("conversation"),
-                    "content": conversation,
-                }
-            )
-
-        for message in messages:
-            memories.append(
-                {
-                    "type": "message",
-                    "score": MemoryScorer.score("conversation"),
-                    "content": message,
-                }
-            )
+        # -------------------------------
+        # Preferences
+        # -------------------------------
 
         for preference in preferences:
-            memories.append(
-                {
-                    "type": "preference",
-                    "score": MemoryScorer.score("preference"),
-                    "content": preference,
-                }
+
+            preference["memory_type"] = "preference"
+
+            preference["score"] = MemoryRanker.rank(
+                memory_type="preference",
+                memory=preference,
             )
+
+            unified_memory.append(preference)
+
+        # -------------------------------
+        # Conversations
+        # -------------------------------
+
+        for conversation in conversations:
+
+            conversation["memory_type"] = "conversation"
+
+            conversation["score"] = MemoryRanker.rank(
+                memory_type="conversation",
+                timestamp=conversation.get("created_at"),
+                memory=conversation,
+            )
+
+        unified_memory.append(conversation)
+
+        # -------------------------------
+        # Messages
+        # -------------------------------
+
+        for message in messages:
+
+            message["memory_type"] = "message"
+
+            message["score"] = MemoryRanker.rank(
+            memory_type="message",
+            timestamp=message.get("created_at"),
+            memory=message,
+        )
+
+            unified_memory.append(message)
+
+        # -------------------------------
+        # Documents
+        # -------------------------------
 
         for document in documents:
-            memories.append(
-                {
-                    "type": "document",
-                    "score": MemoryScorer.score("document"),
-                    "content": document,
-                }
-            )
 
-        memories.sort(
-            key=lambda x: x["score"],
+            document["memory_type"] = "document"
+
+            semantic = document.get("similarity", 1.0)
+
+            document["score"] = MemoryRanker.rank(
+                memory_type="document",
+                semantic_score=semantic,
+                timestamp=document.get("created_at"),
+                memory=document,
+)
+
+            unified_memory.append(document)
+
+        # -------------------------------
+        # Highest score first
+        # -------------------------------
+
+        unified_memory.sort(
+            key=lambda item: item["score"],
             reverse=True,
         )
 
-        return memories
+        return unified_memory

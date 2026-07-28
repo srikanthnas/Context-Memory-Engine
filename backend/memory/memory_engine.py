@@ -15,7 +15,7 @@ from memory.context_optimizer import ContextOptimizer
 from memory.document_memory import DocumentMemory
 from memory.unified_context_manager import UnifiedContextManager
 from llm.llm_manager import LLMManager
-
+from memory.memory_selector import MemorySelector
 
 class MemoryEngine:
     """Main orchestrator for the Context Memory Engine."""
@@ -30,6 +30,7 @@ class MemoryEngine:
         self.document_memory = DocumentMemory()
         self.unified_context_manager = UnifiedContextManager()
         self.llm_manager = LLMManager()
+        self.memory_selector = MemorySelector()
 
     def process_prompt(
         self,
@@ -90,14 +91,14 @@ class MemoryEngine:
         preferences=optimized_memory["preferences"],
         documents=optimized_memory["documents"],
     )
+        selected_memory = self.memory_selector.select(
+            unified_memory
+        )
 
         # Build final LLM context
         context = self.context_builder.build(
             prompt=prepared_prompt["prompt"],
-            preferences=optimized_memory["preferences"],
-            conversations=optimized_memory["conversations"],
-            messages=optimized_memory["messages"],
-            documents=optimized_memory["documents"],
+            selected_memory=selected_memory,
         )
         ai_response = self.llm_manager.generate(context)
 
@@ -109,6 +110,7 @@ class MemoryEngine:
             "document_memory": documents,
             "optimized_memory": optimized_memory,
             "unified_memory": unified_memory,
+            "selected_memory": selected_memory,
             "context": context,
             "ai_response": ai_response,
         }

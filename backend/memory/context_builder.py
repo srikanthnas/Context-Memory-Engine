@@ -1,100 +1,89 @@
 """
 Context Builder
 
-Builds the final context that is sent to the LLM.
+Builds the final LLM prompt from selected memories.
 """
 
 
 class ContextBuilder:
     """
-    Builds a single context string from all memory sources.
+    Builds the final prompt sent to the LLM.
     """
 
     def build(
         self,
         prompt: str,
-        preferences,
-        conversations,
-        messages,
-        documents,
+        selected_memory,
     ):
+
         context = []
 
-        # =====================================================
-        # User Preferences
-        # =====================================================
+        context.append(
+            "You have access to the following memories.\n"
+        )
 
-        context.append("User Preferences:")
+        # ---------------------------------------
+        # Ranked memories
+        # ---------------------------------------
 
-        if preferences:
-            for preference in preferences:
+        for memory in selected_memory:
+
+            memory_type = memory["memory_type"]
+
+            if memory_type == "preference":
+
                 context.append(
-                    f"- {preference['key']}: {preference['value']}"
+                    f"[Preference | Score={memory['score']}]"
                 )
-        else:
-            context.append("- None")
 
-        context.append("")
-
-        # =====================================================
-        # Previous Conversations
-        # =====================================================
-
-        context.append("Previous Conversations:")
-
-        if conversations:
-            for conversation in conversations:
                 context.append(
-                    f"- {conversation['title']}"
+                    f"{memory['key']} = {memory['value']}"
                 )
-        else:
-            context.append("- None")
 
-        context.append("")
+            elif memory_type == "conversation":
 
-        # =====================================================
-        # Recent Messages
-        # =====================================================
-
-        context.append("Recent Messages:")
-
-        if messages:
-            for message in messages:
                 context.append(
-                    f"{message['role'].capitalize()}: {message['content']}"
+                    f"[Conversation | Score={memory['score']}]"
                 )
-        else:
-            context.append("- None")
 
-        context.append("")
+                context.append(
+                    memory["title"]
+                )
 
-        # =====================================================
-        # Relevant Document Chunks
-        # =====================================================
+            elif memory_type == "message":
 
-        context.append("Relevant Documents:")
+                context.append(
+                    f"[Message | Score={memory['score']}]"
+                )
 
-        if documents:
-            for document in documents:
-                context.append(f"- {document['filename']}")
+                context.append(
+                    f"{memory['role']}: {memory['content']}"
+                )
 
-                chunk = document.get("chunk")
+            elif memory_type == "document":
 
-                if chunk:
-                    context.append(chunk)
-                    context.append("")
-                else:
-                    context.append("(No text retrieved)")
-                    context.append("")
-        else:
-            context.append("- None")
+                context.append(
+                    f"[Document | Score={memory['score']}]"
+                )
 
-        # =====================================================
-        # Current Prompt
-        # =====================================================
+                context.append(
+                    f"File: {memory['filename']}"
+                )
 
-        print("DEBUG PROMPT:", repr(prompt))
-        context.append("Current User Prompt:")
+                context.append(
+                    memory["chunk"]
+                )
+
+            context.append("")
+
+        # ---------------------------------------
+        # User Prompt
+        # ---------------------------------------
+
+        context.append(
+            "Current User Question:"
+        )
+
         context.append(prompt)
 
         return "\n".join(context)

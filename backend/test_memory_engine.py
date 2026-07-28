@@ -24,6 +24,24 @@ def main():
         print("=" * 60)
         print(result["context"])
 
+        print("\n" + "=" * 60)
+        print("UNIFIED MEMORY")
+        print("=" * 60)
+
+        for item in result["unified_memory"]:
+            print(item["memory_type"], "->", item["score"])
+
+        print("\n" + "=" * 60)
+        print("SELECTED MEMORY")
+        print("=" * 60)
+
+        for item in result["selected_memory"]:
+            print(
+                item["memory_type"],
+                "->",
+                item["score"]
+            )
+
     finally:
         db.close()
 
