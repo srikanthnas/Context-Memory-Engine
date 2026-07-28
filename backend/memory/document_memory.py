@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from database.models import Document
 from embeddings.embedding_manager import EmbeddingManager
 from retrieval.chroma_vector_store import ChromaVectorStore
+from memory.memory_metadata import MemoryMetadata
 
 
 class DocumentMemory:
@@ -50,6 +51,8 @@ class DocumentMemory:
             )
 
             if document:
+                metadata = MemoryMetadata.touch(metadata)
+
                 relevant_chunks.append(
                     {
                         "document_id": document.id,

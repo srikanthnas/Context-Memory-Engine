@@ -51,7 +51,7 @@ class UnifiedContextManager:
                 memory=conversation,
             )
 
-        unified_memory.append(conversation)
+            unified_memory.append(conversation)
 
         # -------------------------------
         # Messages

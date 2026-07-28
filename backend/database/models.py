@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import (
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -90,7 +91,28 @@ class Document(Base):
     filename = Column(String, nullable=False)
     filepath = Column(String, nullable=False)
 
+    # Existing upload timestamp
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    # -------- Adaptive Memory Metadata --------
+
+    last_accessed = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    access_count = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    importance = Column(
+        Float,
+        default=1.0,
+        nullable=False,
+    )
 
     user = relationship("User", back_populates="documents")
 
