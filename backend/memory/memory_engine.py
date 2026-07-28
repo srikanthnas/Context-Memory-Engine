@@ -13,6 +13,7 @@ from memory.preference_memory import PreferenceMemory
 from memory.context_builder import ContextBuilder
 from memory.context_optimizer import ContextOptimizer
 from memory.document_memory import DocumentMemory
+from memory.unified_context_manager import UnifiedContextManager
 
 
 class MemoryEngine:
@@ -26,6 +27,7 @@ class MemoryEngine:
         self.context_builder = ContextBuilder()
         self.context_optimizer = ContextOptimizer()
         self.document_memory = DocumentMemory()
+        self.unified_context_manager = UnifiedContextManager()
 
     def process_prompt(
         self,
@@ -72,6 +74,12 @@ class MemoryEngine:
             preferences=preferences,
             documents=documents,
         )
+        unified_memory = self.unified_context_manager.build(
+        conversations=optimized_memory["conversations"],
+        messages=optimized_memory["messages"],
+        preferences=optimized_memory["preferences"],
+        documents=optimized_memory["documents"],
+    )
 
         # Build final LLM context
         context = self.context_builder.build(
@@ -89,5 +97,6 @@ class MemoryEngine:
             "preference_memory": preferences,
             "document_memory": documents,
             "optimized_memory": optimized_memory,
+            "unified_memory": unified_memory,
             "context": context,
         }
