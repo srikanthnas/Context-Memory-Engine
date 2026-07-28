@@ -1,29 +1,55 @@
-import chromadb
 import uuid
+
+import chromadb
 
 
 class ChromaVectorStore:
     """
-    Stores and searches document embeddings using ChromaDB.
+    Stores and searches embeddings using ChromaDB.
+
+    Collections:
+    - document_memory : Document chunks
+    - message_memory  : Conversation messages
     """
 
     def __init__(self):
         self.client = chromadb.PersistentClient(
-        path="./chroma_db"
-    )
-
-        self.collection = self.client.get_or_create_collection(
-            name="document_memory"
+            path="./chroma_db"
         )
+
+        # -------------------------------
+        # Document Memory Collection
+        # -------------------------------
+        self.document_collection = (
+            self.client.get_or_create_collection(
+                name="document_memory"
+            )
+        )
+
+        # -------------------------------
+        # Message Memory Collection
+        # -------------------------------
+        self.message_collection = (
+            self.client.get_or_create_collection(
+                name="message_memory"
+            )
+        )
+
+    # ======================================================
+    # DOCUMENT MEMORY
+    # ======================================================
 
     def add_documents(self, embedded_chunks):
         """
-        Store embedded document chunks in ChromaDB.
+        Store embedded document chunks.
         """
 
-        ids = [str(uuid.uuid4()) for _ in embedded_chunks]
+        ids = [
+            str(uuid.uuid4())
+            for _ in embedded_chunks
+        ]
 
-        self.collection.add(
+        self.document_collection.add(
             ids=ids,
             documents=[
                 item["text"]
@@ -39,15 +65,82 @@ class ChromaVectorStore:
             ],
         )
 
-    def search(self, query_embedding, top_k=3, where=None):
-        results = self.collection.query(
-            query_embeddings=[query_embedding.tolist()],
+    def search(
+        self,
+        query_embedding,
+        top_k=3,
+        where=None,
+    ):
+        """
+        Search document memory.
+        """
+
+        return self.document_collection.query(
+            query_embeddings=[
+                query_embedding.tolist()
+            ],
             n_results=top_k,
             where=where,
         )
 
-    
-        return results
-
     def size(self):
-        return self.collection.count()
+        """
+        Number of stored document chunks.
+        """
+
+        return self.document_collection.count()
+
+    # ======================================================
+    # MESSAGE MEMORY
+    # ======================================================
+
+    def add_messages(self, embedded_messages):
+        """
+        Store embedded conversation messages.
+        """
+
+        ids = [
+            str(uuid.uuid4())
+            for _ in embedded_messages
+        ]
+
+        self.message_collection.add(
+            ids=ids,
+            documents=[
+                item["text"]
+                for item in embedded_messages
+            ],
+            embeddings=[
+                item["embedding"].tolist()
+                for item in embedded_messages
+            ],
+            metadatas=[
+                item["metadata"]
+                for item in embedded_messages
+            ],
+        )
+
+    def search_messages(
+        self,
+        query_embedding,
+        top_k=5,
+        where=None,
+    ):
+        """
+        Search conversation memory.
+        """
+
+        return self.message_collection.query(
+            query_embeddings=[
+                query_embedding.tolist()
+            ],
+            n_results=top_k,
+            where=where,
+        )
+
+    def message_count(self):
+        """
+        Number of stored conversation messages.
+        """
+
+        return self.message_collection.count()

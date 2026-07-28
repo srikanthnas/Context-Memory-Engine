@@ -15,33 +15,66 @@ class EmbeddingManager:
     def embed_chunks(self, chunks):
         return self.model.encode(chunks)
 
+    # =====================================================
+    # DOCUMENT EMBEDDINGS
+    # =====================================================
+
     def embed_document_chunks(
-            self,
-            chunks,
-            document_id=None,
-            user_id=None,
-            filename=None
+        self,
+        chunks,
+        document_id=None,
+        user_id=None,
+        filename=None,
+    ):
+        """
+        Generate embeddings for document chunks.
+        """
+
+        embeddings = self.embed_chunks(chunks)
+
+        results = []
+
+        for index, (chunk, embedding) in enumerate(
+            zip(chunks, embeddings)
         ):
-            """
-            Generate embeddings for document chunks and attach metadata.
-            """
+            results.append(
+                {
+                    "text": chunk,
+                    "embedding": embedding,
+                    "metadata": {
+                        "document_id": document_id,
+                        "user_id": user_id,
+                        "filename": filename,
+                        "chunk_index": index,
+                    },
+                }
+            )
 
-            embeddings = self.embed_chunks(chunks)
+        return results
 
-            results = []
+    # =====================================================
+    # MESSAGE EMBEDDINGS
+    # =====================================================
 
-            for index, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                results.append(
-                    {
-                        "text": chunk,
-                        "embedding": embedding,
-                        "metadata": {
-                            "document_id": document_id,
-                            "user_id": user_id,
-                            "filename": filename,
-                            "chunk_index": index,
-                        },
-                    }
-                )
+    def embed_message(
+        self,
+        message,
+        conversation_id,
+        user_id,
+        role,
+    ):
+        """
+        Generate an embedding for a single conversation message.
+        """
 
-            return results
+        embedding = self.embed_text(message)
+
+        return {
+            "text": message,
+            "embedding": embedding,
+            "metadata": {
+                "conversation_id": conversation_id,
+                "user_id": user_id,
+                "role": role,
+            },
+        }

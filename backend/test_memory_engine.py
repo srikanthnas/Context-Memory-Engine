@@ -1,14 +1,14 @@
 from database.connection import SessionLocal
-from memory.memory_engine import MemoryEngine
+from services.chat_service import ChatService
 
 
 def main():
     db = SessionLocal()
 
     try:
-        engine = MemoryEngine()
+        chat = ChatService()
 
-        result = engine.process_prompt(
+        result = chat.chat(
             db=db,
             user_id=1,
             prompt="What programming languages are mentioned in my resume?",
@@ -39,7 +39,7 @@ def main():
             print(
                 item["memory_type"],
                 "->",
-                item["score"]
+                item["score"],
             )
 
     finally:
