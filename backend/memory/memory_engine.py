@@ -14,6 +14,7 @@ from memory.context_builder import ContextBuilder
 from memory.context_optimizer import ContextOptimizer
 from memory.document_memory import DocumentMemory
 from memory.unified_context_manager import UnifiedContextManager
+from llm.llm_manager import LLMManager
 
 
 class MemoryEngine:
@@ -28,6 +29,7 @@ class MemoryEngine:
         self.context_optimizer = ContextOptimizer()
         self.document_memory = DocumentMemory()
         self.unified_context_manager = UnifiedContextManager()
+        self.llm_manager = LLMManager()
 
     def process_prompt(
         self,
@@ -35,6 +37,14 @@ class MemoryEngine:
         user_id: int,
         prompt: str,
     ):
+        print("RAW prompt:", repr(prompt))
+
+        prepared_prompt = self.prompt_manager.prepare_prompt(
+            user_id=user_id,
+            prompt=prompt,
+        )
+
+        print("prepared_prompt:", prepared_prompt)
         # Prepare prompt
         prepared_prompt = self.prompt_manager.prepare_prompt(
             user_id=user_id,
@@ -55,7 +65,7 @@ class MemoryEngine:
         documents = self.document_memory.get_documents(
             db=db,
             user_id=user_id,
-            query=prepared_prompt,
+            query=prepared_prompt["prompt"],
         )
 
         # Retrieve latest messages from the newest conversation
@@ -83,12 +93,13 @@ class MemoryEngine:
 
         # Build final LLM context
         context = self.context_builder.build(
-            prompt=prepared_prompt,
+            prompt=prepared_prompt["prompt"],
             preferences=optimized_memory["preferences"],
             conversations=optimized_memory["conversations"],
             messages=optimized_memory["messages"],
             documents=optimized_memory["documents"],
         )
+        ai_response = self.llm_manager.generate(context)
 
         return {
             "prompt": prepared_prompt,
@@ -99,4 +110,5 @@ class MemoryEngine:
             "optimized_memory": optimized_memory,
             "unified_memory": unified_memory,
             "context": context,
+            "ai_response": ai_response,
         }

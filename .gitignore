@@ -5,6 +5,7 @@ backend/.venv/
 backend/__pycache__/
 backend/**/*.pyc
 backend/*.db
+backend/.env    
 
 # Environment variables
 .env
