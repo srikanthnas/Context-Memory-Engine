@@ -4,6 +4,8 @@ Memory Selector
 Selects the highest-ranked memories for the LLM context.
 """
 
+from memory.memory_ranker import MemoryRanker
+
 
 class MemorySelector:
     """
@@ -19,10 +21,27 @@ class MemorySelector:
         limit=None,
     ):
         """
-        Select the top-ranked memories.
+        Rank memories and return the best ones.
         """
 
         if limit is None:
             limit = cls.DEFAULT_LIMIT
 
-        return unified_memory[:limit]
+        for memory in unified_memory:
+
+            metadata = memory.get("metadata", {})
+
+            memory["score"] = MemoryRanker.rank(
+                memory_type=memory["memory_type"],
+                semantic_score=memory.get("score", 1.0),
+                timestamp=metadata.get("last_accessed"),
+                memory=metadata,
+            )
+
+        ranked_memory = sorted(
+            unified_memory,
+            key=lambda x: x["score"],
+            reverse=True,
+        )
+
+        return ranked_memory[:limit]

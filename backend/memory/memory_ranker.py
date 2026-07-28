@@ -30,14 +30,30 @@ class MemoryRanker:
         timestamp,
     ):
         """
-        Placeholder implementation.
-
-        Returns 1.0 for now.
-        We'll replace this with
-        time-decay scoring later.
+        More recent memories receive higher scores.
+        Older memories gradually decay.
         """
 
-        return 1.0
+        if timestamp is None:
+            return 0.5
+
+        if isinstance(timestamp, str):
+            timestamp = datetime.fromisoformat(timestamp)
+
+        hours_old = (
+            datetime.utcnow() - timestamp
+        ).total_seconds() / 3600
+
+        if hours_old < 1:
+            return 1.0
+        elif hours_old < 24:
+            return 0.8
+        elif hours_old < 24 * 7:
+            return 0.6
+        elif hours_old < 24 * 30:
+            return 0.4
+
+        return 0.2
 
     @classmethod
     def calculate_importance_score(
@@ -45,15 +61,15 @@ class MemoryRanker:
         memory,
     ):
         """
-        Placeholder implementation.
+        Calculates normalized importance score.
 
-        Future versions can use:
-        - bookmarks
-        - user pins
-        - access frequency
+        Importance is stored between 1.0 and 5.0,
+        so we normalize it to 0.0–1.0.
         """
 
-        return memory.get("importance", 1.0)
+        importance = memory.get("importance", 1.0)
+
+        return min(importance / 5.0, 1.0)
 
     @classmethod
     def rank(

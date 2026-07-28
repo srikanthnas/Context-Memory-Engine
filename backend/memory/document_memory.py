@@ -10,6 +10,7 @@ from database.models import Document
 from embeddings.embedding_manager import EmbeddingManager
 from retrieval.chroma_vector_store import ChromaVectorStore
 from memory.memory_metadata import MemoryMetadata
+from datetime import datetime
 
 
 class DocumentMemory:
@@ -52,6 +53,11 @@ class DocumentMemory:
 
             if document:
                 metadata = MemoryMetadata.touch(metadata)
+
+                document.last_accessed = datetime.utcnow()
+                document.access_count += 1
+                document.importance = min(document.importance + 0.05, 5.0)
+                db.commit()
 
                 relevant_chunks.append(
                     {
