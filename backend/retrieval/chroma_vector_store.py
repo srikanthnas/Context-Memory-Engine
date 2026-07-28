@@ -19,22 +19,23 @@ class ChromaVectorStore:
 
     def add_documents(self, embedded_chunks):
         """
-        embedded_chunks:
-        [
-            {
-                "text": "...",
-                "embedding": [...]
-            }
-        ]
+        Store embedded document chunks in ChromaDB.
         """
 
         ids = [str(uuid.uuid4()) for _ in embedded_chunks]
 
         self.collection.add(
             ids=ids,
-            documents=[item["text"] for item in embedded_chunks],
+            documents=[
+                item["text"]
+                for item in embedded_chunks
+            ],
             embeddings=[
                 item["embedding"].tolist()
+                for item in embedded_chunks
+            ],
+            metadatas=[
+                item["metadata"]
                 for item in embedded_chunks
             ],
         )

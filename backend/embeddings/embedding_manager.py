@@ -15,19 +15,31 @@ class EmbeddingManager:
     def embed_chunks(self, chunks):
         return self.model.encode(chunks)
 
-    def embed_document_chunks(self, chunks):
-        """
-        Generate embeddings for all document chunks.
-        """
+    def embed_document_chunks(
+            self,
+            chunks,
+            document_id=None,
+            filename=None
+        ):
+            """
+            Generate embeddings for document chunks and attach metadata.
+            """
 
-        embeddings = self.model.encode(chunks)
+            embeddings = self.embed_chunks(chunks)
 
-        results = []
+            results = []
 
-        for chunk, embedding in zip(chunks, embeddings):
-            results.append({
-                "text": chunk,
-                "embedding": embedding
-            })
+            for index, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+                results.append(
+                    {
+                        "text": chunk,
+                        "embedding": embedding,
+                        "metadata": {
+                            "document_id": document_id,
+                            "filename": filename,
+                            "chunk_index": index,
+                        },
+                    }
+                )
 
-        return results
+            return results

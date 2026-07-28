@@ -12,8 +12,11 @@ documents = [
     "Football is a popular sport."
 ]
 
-embedded = manager.embed_document_chunks(documents)
-
+embedded = manager.embed_document_chunks(
+    documents,
+    document_id=1,
+    filename="resume.pdf"
+)
 store.add_documents(embedded)
 
 print("Stored:", store.size())
@@ -26,5 +29,14 @@ results = store.search(query_embedding)
 
 print("\nTop Matches:\n")
 
-for doc in results["documents"][0]:
+for doc, metadata in zip(
+    results["documents"][0],
+    results["metadatas"][0]
+):
+    print("Document:")
     print(doc)
+
+    print("Metadata:")
+    print(metadata)
+
+    print("-" * 40)
