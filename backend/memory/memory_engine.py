@@ -53,48 +53,31 @@ class MemoryEngine:
 
         return prepared_prompt
 
-    def process_prompt(
+    def _retrieve_memories(
         self,
         db: Session,
         user_id: int,
-        prompt: str,
+        prepared_prompt: dict,
     ):
-        prepared_prompt = self._prepare_prompt(
-            user_id=user_id,
-            prompt=prompt,
-        )
-
-        # ---------------------------------------------------
-        # Retrieve conversation memory
-        # ---------------------------------------------------
+        """
+        Retrieve all memories required for response generation.
+        """
 
         conversations = self.conversation_memory.get_recent_conversations(
             db=db,
             user_id=user_id,
         )
 
-        # ---------------------------------------------------
-        # Retrieve user preferences
-        # ---------------------------------------------------
-
         preferences = self.preference_memory.get_preferences(
             db=db,
             user_id=user_id,
         )
-
-        # ---------------------------------------------------
-        # Retrieve relevant documents
-        # ---------------------------------------------------
 
         documents = self.document_memory.get_documents(
             db=db,
             user_id=user_id,
             query=prepared_prompt["prompt"],
         )
-
-        # ---------------------------------------------------
-        # Retrieve recent conversation messages
-        # ---------------------------------------------------
 
         recent_messages = []
 
@@ -104,18 +87,10 @@ class MemoryEngine:
                 conversation_id=conversations[0]["id"],
             )
 
-        # ---------------------------------------------------
-        # Retrieve semantic message memories
-        # ---------------------------------------------------
-
         semantic_messages = self.message_memory.search_relevant_messages(
             query=prepared_prompt["prompt"],
             user_id=user_id,
         )
-
-        # ---------------------------------------------------
-        # Merge both message sources
-        # ---------------------------------------------------
 
         message_map = {}
 
@@ -143,20 +118,48 @@ class MemoryEngine:
 
         latest_messages = list(message_map.values())
 
-        # ---------------------------------------------------
-        # Optimize memory
-        # ---------------------------------------------------
+        return {
+            "conversations": conversations,
+            "preferences": preferences,
+            "documents": documents,
+            "messages": latest_messages,
+        }
 
-        optimized_memory = self.context_optimizer.optimize(
-            conversations=conversations,
-            messages=latest_messages,
-            preferences=preferences,
-            documents=documents,
+    def _optimize_memory(
+        self,
+        memory: dict,
+    ):
+        """
+        Optimize retrieved memories before building unified memory.
+        """
+
+        return self.context_optimizer.optimize(
+            conversations=memory["conversations"],
+            messages=memory["messages"],
+            preferences=memory["preferences"],
+            documents=memory["documents"],
         )
 
-        # ---------------------------------------------------
-        # Build unified memory
-        # ---------------------------------------------------
+    def process_prompt(
+        self,
+        db: Session,
+        user_id: int,
+        prompt: str,
+    ):
+        prepared_prompt = self._prepare_prompt(
+            user_id=user_id,
+            prompt=prompt,
+        )
+
+        memory = self._retrieve_memories(
+            db=db,
+            user_id=user_id,
+            prepared_prompt=prepared_prompt,
+        )
+
+        optimized_memory = self._optimize_memory(
+            memory=memory,
+        )
 
         unified_memory = self.unified_context_manager.build(
             conversations=optimized_memory["conversations"],
@@ -165,35 +168,23 @@ class MemoryEngine:
             documents=optimized_memory["documents"],
         )
 
-        # ---------------------------------------------------
-        # Rank and select memories
-        # ---------------------------------------------------
-
         selected_memory = self.memory_selector.select(
             unified_memory
         )
-
-        # ---------------------------------------------------
-        # Build context
-        # ---------------------------------------------------
 
         context = self.context_builder.build(
             prompt=prepared_prompt["prompt"],
             selected_memory=selected_memory,
         )
 
-        # ---------------------------------------------------
-        # Generate response
-        # ---------------------------------------------------
-
         ai_response = self.llm_manager.generate(context)
 
         return {
             "prompt": prepared_prompt,
-            "conversation_memory": conversations,
-            "message_memory": latest_messages,
-            "preference_memory": preferences,
-            "document_memory": documents,
+            "conversation_memory": memory["conversations"],
+            "message_memory": memory["messages"],
+            "preference_memory": memory["preferences"],
+            "document_memory": memory["documents"],
             "optimized_memory": optimized_memory,
             "unified_memory": unified_memory,
             "selected_memory": selected_memory,
