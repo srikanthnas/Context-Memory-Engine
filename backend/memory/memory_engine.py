@@ -33,21 +33,36 @@ class MemoryEngine:
         self.llm_manager = LLMManager()
         self.memory_selector = MemorySelector()
 
-    def process_prompt(
+    def _prepare_prompt(
         self,
-        db: Session,
         user_id: int,
         prompt: str,
     ):
+        """
+        Prepare and normalize the incoming prompt.
+        """
+
         print("RAW prompt:", repr(prompt))
 
-        # Prepare prompt only once
         prepared_prompt = self.prompt_manager.prepare_prompt(
             user_id=user_id,
             prompt=prompt,
         )
 
         print("prepared_prompt:", prepared_prompt)
+
+        return prepared_prompt
+
+    def process_prompt(
+        self,
+        db: Session,
+        user_id: int,
+        prompt: str,
+    ):
+        prepared_prompt = self._prepare_prompt(
+            user_id=user_id,
+            prompt=prompt,
+        )
 
         # ---------------------------------------------------
         # Retrieve conversation memory
