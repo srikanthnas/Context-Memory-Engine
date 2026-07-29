@@ -1,89 +1,335 @@
-# Context Memory Engine (CME)
+# 🧠 Context Memory Engine
 
-## An LLM-Independent Memory Middleware for Persistent Context Preservation
+A modular AI Context Memory Engine that enables Large Language Models (LLMs) to remember conversations, uploaded documents, and user preferences across interactions.
 
-## 📖 Overview
-
-Context Memory Engine (CME) is a full-stack web application that acts as an intelligent middleware between users and Large Language Models (LLMs). Instead of sending user prompts directly to an LLM, CME enriches every prompt with persistent context retrieved from previous conversations, user preferences, and uploaded documents.
-
-The system is designed to be **LLM-independent**, allowing integration with multiple providers such as OpenAI, Anthropic, Google Gemini, and local models in the future.
+The project is designed to provide persistent, relevant, and optimized context to an LLM instead of relying only on the current prompt, making AI conversations more continuous, personalized, and reliable.
 
 ---
 
-## 🎯 Objectives
+# ✨ Features
 
-- Maintain long-term conversation memory
-- Store and retrieve user preferences
-- Support document-based contextual retrieval
-- Build enriched prompts before sending them to an LLM
-- Remain independent of any specific LLM provider
+## ✅ Conversation Memory
+- Stores conversations in SQLite
+- Retrieves recent conversations
+- Maintains conversation history
+- Supports multiple conversations per user
 
 ---
 
-## 🛠️ Tech Stack
+## ✅ Message Memory
+- Stores chat messages
+- Retrieves recent messages
+- Semantic retrieval using embeddings
+- ChromaDB vector search
 
-### Frontend
-- React
-- Vite
+---
 
-### Backend
-- FastAPI
-- Python
+## ✅ Document Memory
+- Upload and index documents
+- Semantic document retrieval
+- Automatic document ranking
+- Metadata tracking
+    - Importance
+    - Access count
+    - Last accessed timestamp
 
-### Database
-- SQLite
-- SQLAlchemy *(Upcoming)*
+---
 
-### Future Integrations
-- FAISS
-- OpenAI
-- Anthropic Claude
+## ✅ User Preference Memory
+Stores user-specific preferences such as:
+
+- Language
+- Interaction preferences
+- Personal settings
+
+These preferences are automatically injected into the LLM context.
+
+---
+
+## ✅ Embedding Pipeline
+
+Uses Sentence Transformers for semantic embeddings.
+
+Current pipeline:
+
+```
+Text
+   │
+   ▼
+Embedding Manager
+   │
+   ▼
+Sentence Transformer
+   │
+   ▼
+ChromaDB
+```
+
+---
+
+## ✅ Vector Database
+
+Uses ChromaDB for semantic retrieval.
+
+Collections:
+
+- Documents
+- Messages
+
+Supports:
+
+- Similarity Search
+- Metadata Filtering
+- Top-K Retrieval
+
+---
+
+## ✅ Memory Optimization
+
+Before sending context to the LLM, the engine:
+
+- Removes unnecessary memory
+- Combines multiple memory sources
+- Reduces context size
+- Optimizes retrieval quality
+
+---
+
+## ✅ Unified Context Manager
+
+Combines:
+
+- Conversation Memory
+- Message Memory
+- Document Memory
+- User Preferences
+
+into a single unified memory representation.
+
+---
+
+## ✅ Memory Ranking
+
+Uses a dedicated Memory Selector that ranks memories based on relevance before sending them to the LLM.
+
+---
+
+## ✅ Context Builder
+
+Constructs the final prompt for the LLM by combining:
+
+- Current user question
+- Selected memories
+- Retrieved documents
+- Conversation history
+- Preferences
+
+---
+
+## ✅ LLM Integration
+
+Current provider:
+
 - Google Gemini
+
+The architecture is provider-independent and can be extended to support:
+
+- OpenAI
+- Claude
+- Local LLMs
 - Ollama
 
 ---
 
-## 📂 Project Structure
+# 🏗 Architecture
 
 ```
-Context-Memory-Engine/
+Frontend/API
+      │
+      ▼
+ChatService
+      │
+      ▼
+MemoryEngine
+      │
+      ├──────── PromptManager
+      ├──────── ConversationMemory
+      ├──────── MessageMemory
+      ├──────── DocumentMemory
+      ├──────── PreferenceMemory
+      ├──────── ContextOptimizer
+      ├──────── UnifiedContextManager
+      ├──────── MemorySelector
+      ├──────── ContextBuilder
+      └──────── LLMManager
+                     │
+                     ▼
+                 Gemini API
+```
+
+---
+
+# ⚙️ Tech Stack
+
+### Backend
+
+- Python
+- FastAPI
+- SQLAlchemy
+
+### Database
+
+- SQLite
+
+### Vector Database
+
+- ChromaDB
+
+### Embeddings
+
+- Sentence Transformers
+
+### LLM
+
+- Google Gemini API
+
+---
+
+# 📂 Project Structure
+
+```
+backend/
 │
-├── backend/
-├── frontend/
-├── docs/
-├── .gitignore
-└── README.md
+├── database/
+├── embeddings/
+├── llm/
+├── memory/
+│   ├── conversation_memory.py
+│   ├── message_memory.py
+│   ├── document_memory.py
+│   ├── preference_memory.py
+│   ├── context_optimizer.py
+│   ├── unified_context_manager.py
+│   ├── context_builder.py
+│   ├── memory_selector.py
+│   └── memory_engine.py
+│
+├── retrieval/
+├── services/
+└── test_memory_engine.py
 ```
 
 ---
 
-## 🚀 Current Status
+# 🧩 Memory Engine Workflow
 
-### ✅ Phase 1 - Project Initialization
-
-- React frontend created
-- FastAPI backend created
-- Backend folder structure organized
-- Backend running successfully
-- Health API implemented
+```
+User Prompt
+      │
+      ▼
+Prepare Prompt
+      │
+      ▼
+Retrieve Memories
+      │
+      ▼
+Optimize Memory
+      │
+      ▼
+Build Unified Memory
+      │
+      ▼
+Select Relevant Memory
+      │
+      ▼
+Build Context
+      │
+      ▼
+Generate AI Response
+```
 
 ---
 
-## 🗺️ Roadmap
+# 🚀 Current Progress
 
-- Phase 1 — Project Initialization ✅
-- Phase 2 — Database Layer
-- Phase 3 — Context Memory Engine Core
-- Phase 4 — Conversation Memory
-- Phase 5 — Preference Memory
-- Phase 6 — Document Memory
-- Phase 7 — Semantic Search
-- Phase 8 — LLM Integration
-- Phase 9 — Frontend Dashboard
-- Phase 10 — Testing & Deployment
+## ✅ Completed
+
+- Conversation Memory
+- Message Memory
+- Document Memory
+- Preference Memory
+- Embedding Manager
+- ChromaDB Integration
+- Semantic Search
+- Context Optimizer
+- Unified Context Manager
+- Memory Ranking
+- Context Builder
+- Gemini Integration
+- Modular Memory Engine Refactor
+- End-to-End Memory Pipeline
 
 ---
 
-## 👨‍💻 Author
+# 🔄 In Progress
 
-Developed by **Srikanth NAS**
+- Duplicate memory removal
+- Improved semantic ranking
+- Better memory filtering
+- Error handling and fallback for LLM providers
+
+---
+
+# 📋 Planned Features
+
+- Multi-document conversations
+- Long-term memory
+- Memory aging and decay
+- Hybrid keyword + semantic retrieval
+- Streaming responses
+- Multi-LLM support
+- Memory visualization dashboard
+- Memory analytics
+- User memory editing
+- Context compression
+- Conversation summarization
+- REST API endpoints
+- Frontend dashboard
+
+---
+
+# 📊 Current Status
+
+| Module | Status |
+|---------|--------|
+| Conversation Memory | ✅ Complete |
+| Message Memory | ✅ Complete |
+| Document Memory | ✅ Complete |
+| Preference Memory | ✅ Complete |
+| Embedding Manager | ✅ Complete |
+| ChromaDB Integration | ✅ Complete |
+| Context Optimizer | ✅ Complete |
+| Unified Context Manager | ✅ Complete |
+| Memory Selector | ✅ Complete |
+| Context Builder | ✅ Complete |
+| Gemini Integration | ✅ Complete |
+| Memory Engine Refactor | ✅ Complete |
+| Duplicate Removal | 🚧 In Progress |
+| Long-Term Memory | ⏳ Planned |
+| Memory Dashboard | ⏳ Planned |
+
+---
+
+# 🎯 Vision
+
+The goal of this project is to build a reusable Context Memory Engine that allows LLM-powered applications to maintain persistent, relevant, and personalized memory across long conversations while remaining modular enough to integrate with different AI models and applications.
+
+---
+
+# 👨‍💻 Author
+
+**Srikanth NAS**
+
+Information Science & Engineering
+
+AI • LLMs • Full Stack Development • Data Science
