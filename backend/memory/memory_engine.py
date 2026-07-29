@@ -30,8 +30,8 @@ class MemoryEngine:
         self.context_optimizer = ContextOptimizer()
         self.document_memory = DocumentMemory()
         self.unified_context_manager = UnifiedContextManager()
-        self.llm_manager = LLMManager()
         self.memory_selector = MemorySelector()
+        self.llm_manager = LLMManager()
 
     def _prepare_prompt(
         self,
@@ -92,31 +92,10 @@ class MemoryEngine:
             user_id=user_id,
         )
 
-        message_map = {}
-
-        for message in recent_messages:
-            key = (
-                message.get("id")
-                if message.get("id") is not None
-                else (
-                    message.get("role"),
-                    message.get("content"),
-                )
-            )
-            message_map[key] = message
-
-        for message in semantic_messages:
-            key = (
-                message.get("id")
-                if message.get("id") is not None
-                else (
-                    message.get("role"),
-                    message.get("content"),
-                )
-            )
-            message_map[key] = message
-
-        latest_messages = list(message_map.values())
+        latest_messages = self._deduplicate_messages(
+            recent_messages=recent_messages,
+            semantic_messages=semantic_messages,
+        )
 
         return {
             "conversations": conversations,
@@ -124,6 +103,32 @@ class MemoryEngine:
             "documents": documents,
             "messages": latest_messages,
         }
+
+    def _deduplicate_messages(
+        self,
+        recent_messages: list,
+        semantic_messages: list,
+    ):
+        """
+        Merge and remove duplicate messages.
+
+        Messages are deduplicated using:
+        (role, normalized content)
+        """
+
+        message_map = {}
+
+        for message in recent_messages + semantic_messages:
+
+            key = (
+                message.get("role"),
+                message.get("content", "").strip().lower(),
+            )
+
+            if key not in message_map:
+                message_map[key] = message
+
+        return list(message_map.values())
 
     def _optimize_memory(
         self,
@@ -139,6 +144,7 @@ class MemoryEngine:
             preferences=memory["preferences"],
             documents=memory["documents"],
         )
+
     def _build_unified_memory(
         self,
         optimized_memory: dict,
@@ -153,6 +159,7 @@ class MemoryEngine:
             preferences=optimized_memory["preferences"],
             documents=optimized_memory["documents"],
         )
+
     def _select_memory(
         self,
         unified_memory: dict,
@@ -164,6 +171,7 @@ class MemoryEngine:
         return self.memory_selector.select(
             unified_memory
         )
+
     def _build_context(
         self,
         prepared_prompt: dict,
@@ -177,6 +185,7 @@ class MemoryEngine:
             prompt=prepared_prompt["prompt"],
             selected_memory=selected_memory,
         )
+
     def _generate_response(
         self,
         context: str,
@@ -193,6 +202,10 @@ class MemoryEngine:
         user_id: int,
         prompt: str,
     ):
+        """
+        Main orchestration pipeline for the Context Memory Engine.
+        """
+
         prepared_prompt = self._prepare_prompt(
             user_id=user_id,
             prompt=prompt,

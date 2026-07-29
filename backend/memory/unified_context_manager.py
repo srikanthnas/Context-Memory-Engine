@@ -97,4 +97,8 @@ class UnifiedContextManager:
             reverse=True,
         )
 
+        print("\n=== RETRIEVED CONVERSATIONS ===")
+        for c in conversations:
+            print(c)
+
         return unified_memory
