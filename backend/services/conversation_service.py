@@ -5,12 +5,19 @@ from sqlalchemy.orm import Session
 from database.models import Conversation
 from schemas.conversation import ConversationCreate
 
+from embeddings.embedding_manager import EmbeddingManager
+from retrieval.chroma_vector_store import ChromaVectorStore
+
 
 class ConversationService:
     """Handles conversation-related business logic."""
 
-    @staticmethod
+    def __init__(self):
+        self.embedding_manager = EmbeddingManager()
+        self.vector_store = ChromaVectorStore()
+
     def create_conversation(
+        self,
         db: Session,
         conversation: ConversationCreate,
     ) -> Conversation:
@@ -23,6 +30,20 @@ class ConversationService:
         db.add(new_conversation)
         db.commit()
         db.refresh(new_conversation)
+
+        # ==========================================
+        # Store Conversation Embedding
+        # ==========================================
+
+        embedded_conversation = self.embedding_manager.embed_conversation(
+            title=new_conversation.title,
+            conversation_id=new_conversation.id,
+            user_id=new_conversation.user_id,
+        )
+
+        self.vector_store.add_conversations(
+            [embedded_conversation]
+        )
 
         return new_conversation
 

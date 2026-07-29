@@ -78,3 +78,27 @@ class EmbeddingManager:
                 "role": role,
             },
         }
+        # =====================================================
+    # CONVERSATION EMBEDDINGS
+    # =====================================================
+
+    def embed_conversation(
+        self,
+        title,
+        conversation_id,
+        user_id,
+    ):
+        """
+        Generate an embedding for a conversation.
+        """
+
+        embedding = self.embed_text(title)
+
+        return {
+            "text": title,
+            "embedding": embedding,
+            "metadata": {
+                "conversation_id": conversation_id,
+                "user_id": user_id,
+            },
+        }

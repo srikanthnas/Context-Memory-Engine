@@ -35,6 +35,16 @@ class ChromaVectorStore:
             )
         )
 
+                # -------------------------------
+        # Conversation Memory Collection
+        # -------------------------------
+
+        self.conversation_collection = (
+            self.client.get_or_create_collection(
+                name="conversation_memory"
+            )
+        )
+
     # ======================================================
     # DOCUMENT MEMORY
     # ======================================================
@@ -142,5 +152,65 @@ class ChromaVectorStore:
         """
         Number of stored conversation messages.
         """
+
+        # ======================================================
+    # CONVERSATION MEMORY
+    # ======================================================
+
+    def add_conversations(
+        self,
+        embedded_conversations,
+    ):
+        """
+        Store embedded conversations.
+        """
+
+        ids = [
+            str(uuid.uuid4())
+            for _ in embedded_conversations
+        ]
+
+        self.conversation_collection.add(
+            ids=ids,
+            documents=[
+                item["text"]
+                for item in embedded_conversations
+            ],
+            embeddings=[
+                item["embedding"].tolist()
+                for item in embedded_conversations
+            ],
+            metadatas=[
+                item["metadata"]
+                for item in embedded_conversations
+            ],
+        )
+
+    def search_conversations(
+        self,
+        query_embedding,
+        top_k=5,
+        where=None,
+    ):
+        """
+        Search conversation memory.
+        """
+
+        return self.conversation_collection.query(
+            query_embeddings=[
+                query_embedding.tolist()
+            ],
+            n_results=top_k,
+            where=where,
+        )
+
+    def conversation_count(
+        self,
+    ):
+        """
+        Number of stored conversations.
+        """
+
+        return self.conversation_collection.count()
 
         return self.message_collection.count()

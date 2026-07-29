@@ -66,6 +66,7 @@ class MemoryEngine:
         conversations = self.conversation_memory.get_recent_conversations(
             db=db,
             user_id=user_id,
+            prompt=prepared_prompt["prompt"],
         )
 
         preferences = self.preference_memory.get_preferences(

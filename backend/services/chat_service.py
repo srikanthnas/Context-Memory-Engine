@@ -20,6 +20,7 @@ class ChatService:
 
     def __init__(self):
         self.memory_engine = MemoryEngine()
+        self.conversation_service = ConversationService()
 
     def chat(
         self,
@@ -35,7 +36,7 @@ class ChatService:
 
         if conversation_id is None:
 
-            conversation = ConversationService.create_conversation(
+            conversation = self.conversation_service.create_conversation(
                 db=db,
                 conversation=ConversationCreate(
                     user_id=user_id,
