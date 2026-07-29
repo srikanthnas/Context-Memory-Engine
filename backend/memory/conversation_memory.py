@@ -62,3 +62,34 @@ class ConversationMemory:
                     )
 
         return conversations
+
+    def get_latest_conversations(
+            self,
+            db: Session,
+            user_id: int,
+            limit: int = 3,
+        ):
+            """
+            Retrieve the most recent conversations.
+            """
+
+            conversations = (
+                db.query(Conversation)
+                .filter(
+                    Conversation.user_id == user_id
+                )
+                .order_by(
+                    Conversation.created_at.desc()
+                )
+                .limit(limit)
+                .all()
+            )
+
+            return [
+                {
+                    "id": conversation.id,
+                    "title": conversation.title,
+                    "created_at": conversation.created_at.isoformat(),
+                }
+                for conversation in conversations
+            ]

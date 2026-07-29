@@ -63,10 +63,24 @@ class MemoryEngine:
         Retrieve all memories required for response generation.
         """
 
-        conversations = self.conversation_memory.get_recent_conversations(
-            db=db,
-            user_id=user_id,
-            prompt=prepared_prompt["prompt"],
+        semantic_conversations = (
+            self.conversation_memory.get_recent_conversations(
+                db=db,
+                user_id=user_id,
+                prompt=prepared_prompt["prompt"],
+            )
+        )
+
+        recent_conversations = (
+            self.conversation_memory.get_latest_conversations(
+                db=db,
+                user_id=user_id,
+            )
+        )
+
+        conversations = self._deduplicate_conversations(
+            recent_conversations=recent_conversations,
+            semantic_conversations=semantic_conversations,
         )
 
         preferences = self.preference_memory.get_preferences(
@@ -130,6 +144,31 @@ class MemoryEngine:
                 message_map[key] = message
 
         return list(message_map.values())
+    
+    def _deduplicate_conversations(
+        self,
+        recent_conversations: list,
+        semantic_conversations: list,
+    ):
+        """
+        Merge and remove duplicate conversations.
+
+        Conversations are deduplicated using:
+        conversation id
+        """
+
+        conversation_map = {}
+
+        for conversation in (
+            recent_conversations + semantic_conversations
+        ):
+
+            key = conversation.get("id")
+
+            if key not in conversation_map:
+                conversation_map[key] = conversation
+
+        return list(conversation_map.values())
 
     def _optimize_memory(
         self,
