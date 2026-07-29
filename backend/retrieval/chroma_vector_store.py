@@ -166,8 +166,8 @@ class ChromaVectorStore:
         """
 
         ids = [
-            str(uuid.uuid4())
-            for _ in embedded_conversations
+            f"conversation_{item['metadata']['conversation_id']}"
+            for item in embedded_conversations
         ]
 
         self.conversation_collection.add(
@@ -213,4 +213,38 @@ class ChromaVectorStore:
 
         return self.conversation_collection.count()
 
-        return self.message_collection.count()
+
+    def update_conversation(
+        self,
+        embedded_conversation,
+    ):
+        """
+        Replace an existing conversation embedding.
+        """
+
+        conversation_id = (
+            embedded_conversation["metadata"]["conversation_id"]
+        )
+
+        vector_id = f"conversation_{conversation_id}"
+
+        # Remove previous embedding if it exists
+        try:
+            self.conversation_collection.delete(
+                ids=[vector_id]
+            )
+        except Exception:
+            pass
+
+        self.conversation_collection.add(
+            ids=[vector_id],
+            documents=[
+                embedded_conversation["text"]
+            ],
+            embeddings=[
+                embedded_conversation["embedding"].tolist()
+            ],
+            metadatas=[
+                embedded_conversation["metadata"]
+            ],
+        )

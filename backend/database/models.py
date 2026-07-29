@@ -45,13 +45,37 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(Integer, primary_key=True, index=True)
+
     title = Column(String, nullable=False)
 
-    user_id = Column(Integer, ForeignKey("users.id"))
+    # -------------------------
+    # Conversation Summary
+    # -------------------------
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    summary = Column(
+        Text,
+        nullable=True,
+    )
 
-    user = relationship("User", back_populates="conversations")
+    summary_updated = Column(
+        DateTime,
+        nullable=True,
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id")
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    user = relationship(
+        "User",
+        back_populates="conversations"
+    )
 
     messages = relationship(
         "Message",

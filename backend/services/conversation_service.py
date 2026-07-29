@@ -37,6 +37,7 @@ class ConversationService:
 
         embedded_conversation = self.embedding_manager.embed_conversation(
             title=new_conversation.title,
+            summary="",
             conversation_id=new_conversation.id,
             user_id=new_conversation.user_id,
         )

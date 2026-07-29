@@ -14,7 +14,7 @@ load_dotenv()
 
 class GeminiClient:
     """
-    Wrapper around the Google Gemini API.
+    Generic wrapper around the Google Gemini API.
     """
 
     def __init__(self):
@@ -27,9 +27,27 @@ class GeminiClient:
 
         self.client = genai.Client(api_key=api_key)
 
-    def generate_response(self, context: str) -> str:
+    def generate(
+        self,
+        prompt: str,
+    ) -> str:
         """
-        Generate a response using the Context Memory Engine context.
+        Generate text from Gemini using any prompt.
+        """
+
+        response = self.client.models.generate_content(
+            model="gemini-flash-latest",
+            contents=prompt,
+        )
+
+        return response.text
+
+    def generate_response(
+        self,
+        context: str,
+    ) -> str:
+        """
+        Generate an assistant response using the Context Memory Engine.
         """
 
         prompt = f"""
@@ -58,9 +76,4 @@ INSTRUCTIONS:
 =================================================
 """
 
-        response = self.client.models.generate_content(
-            model="gemini-flash-latest",
-            contents=prompt,
-        )
-
-        return response.text
+        return self.generate(prompt)

@@ -85,6 +85,7 @@ class EmbeddingManager:
     def embed_conversation(
         self,
         title,
+        summary,
         conversation_id,
         user_id,
     ):
@@ -92,10 +93,12 @@ class EmbeddingManager:
         Generate an embedding for a conversation.
         """
 
-        embedding = self.embed_text(title)
+        text = f"{title}\n\n{summary}"
+
+        embedding = self.embed_text(text)
 
         return {
-            "text": title,
+            "text": text,
             "embedding": embedding,
             "metadata": {
                 "conversation_id": conversation_id,
