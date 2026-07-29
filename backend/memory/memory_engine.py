@@ -139,6 +139,53 @@ class MemoryEngine:
             preferences=memory["preferences"],
             documents=memory["documents"],
         )
+    def _build_unified_memory(
+        self,
+        optimized_memory: dict,
+    ):
+        """
+        Build a unified memory from the optimized memory sources.
+        """
+
+        return self.unified_context_manager.build(
+            conversations=optimized_memory["conversations"],
+            messages=optimized_memory["messages"],
+            preferences=optimized_memory["preferences"],
+            documents=optimized_memory["documents"],
+        )
+    def _select_memory(
+        self,
+        unified_memory: dict,
+    ):
+        """
+        Rank and select the most relevant memories.
+        """
+
+        return self.memory_selector.select(
+            unified_memory
+        )
+    def _build_context(
+        self,
+        prepared_prompt: dict,
+        selected_memory: dict,
+    ):
+        """
+        Build the final prompt context for the LLM.
+        """
+
+        return self.context_builder.build(
+            prompt=prepared_prompt["prompt"],
+            selected_memory=selected_memory,
+        )
+    def _generate_response(
+        self,
+        context: str,
+    ):
+        """
+        Generate the final AI response from the constructed context.
+        """
+
+        return self.llm_manager.generate(context)
 
     def process_prompt(
         self,
@@ -161,23 +208,22 @@ class MemoryEngine:
             memory=memory,
         )
 
-        unified_memory = self.unified_context_manager.build(
-            conversations=optimized_memory["conversations"],
-            messages=optimized_memory["messages"],
-            preferences=optimized_memory["preferences"],
-            documents=optimized_memory["documents"],
+        unified_memory = self._build_unified_memory(
+            optimized_memory=optimized_memory,
         )
 
-        selected_memory = self.memory_selector.select(
-            unified_memory
+        selected_memory = self._select_memory(
+            unified_memory=unified_memory,
         )
 
-        context = self.context_builder.build(
-            prompt=prepared_prompt["prompt"],
+        context = self._build_context(
+            prepared_prompt=prepared_prompt,
             selected_memory=selected_memory,
         )
 
-        ai_response = self.llm_manager.generate(context)
+        ai_response = self._generate_response(
+            context=context,
+        )
 
         return {
             "prompt": prepared_prompt,
