@@ -55,6 +55,7 @@ class MessageService:
                     conversation_id=message.conversation_id,
                     user_id=conversation.user_id,
                     role=message.role,
+                    message_id=new_message.id,
                 )
             )
 

@@ -21,10 +21,18 @@ class MessageMemory:
         conversation_id: int,
         limit: int = 10,
     ):
+        """
+        Retrieve the most recent messages from SQLite.
+        """
+
         messages = (
             db.query(Message)
-            .filter(Message.conversation_id == conversation_id)
-            .order_by(Message.timestamp.desc())
+            .filter(
+                Message.conversation_id == conversation_id
+            )
+            .order_by(
+                Message.timestamp.desc()
+            )
             .limit(limit)
             .all()
         )
@@ -32,9 +40,17 @@ class MessageMemory:
         return [
             {
                 "id": message.id,
+                "conversation_id": message.conversation_id,
                 "role": message.role,
                 "content": message.content,
                 "timestamp": message.timestamp.isoformat(),
+                "importance": message.importance,
+                "access_count": message.access_count,
+                "last_accessed": (
+                    message.last_accessed.isoformat()
+                    if message.last_accessed
+                    else None
+                ),
             }
             for message in reversed(messages)
         ]
@@ -47,10 +63,13 @@ class MessageMemory:
         top_k: int = 5,
     ):
         """
-        Retrieve semantically relevant messages.
+        Retrieve semantically relevant messages
+        from ChromaDB.
         """
 
-        query_embedding = cls.embedding_manager.model.encode(query)
+        query_embedding = (
+            cls.embedding_manager.model.encode(query)
+        )
 
         results = cls.vector_store.search_messages(
             query_embedding=query_embedding,
@@ -62,21 +81,44 @@ class MessageMemory:
 
         messages = []
 
-        if results["documents"]:
+        documents = results.get(
+            "documents",
+            [[]],
+        )[0]
 
-            for document, metadata, distance in zip(
-                results["documents"][0],
-                results["metadatas"][0],
-                results["distances"][0],
-            ):
+        metadatas = results.get(
+            "metadatas",
+            [[]],
+        )[0]
 
-                messages.append(
-                    {
-                        "role": metadata.get("role", "unknown"),
-                        "content": document,
-                        "score": 1 - distance,
-                        "metadata": metadata,
-                    }
-                )
+        distances = results.get(
+            "distances",
+            [[]],
+        )[0]
+
+        for document, metadata, distance in zip(
+            documents,
+            metadatas,
+            distances,
+        ):
+
+            # Message ID stored in Chroma metadata
+            message_id = metadata.get("message_id")
+
+            messages.append(
+                {
+                    "id": message_id,
+                    "conversation_id": metadata.get(
+                        "conversation_id"
+                    ),
+                    "role": metadata.get(
+                        "role",
+                        "unknown",
+                    ),
+                    "content": document,
+                    "similarity": 1 - distance,
+                    "metadata": metadata,
+                }
+            )
 
         return messages

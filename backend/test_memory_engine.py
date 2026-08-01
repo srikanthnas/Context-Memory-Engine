@@ -1,90 +1,56 @@
 from database.connection import SessionLocal
-from memory.memory_engine import MemoryEngine
+from services.chat_service import ChatService
 
 
 def main():
     db = SessionLocal()
 
     try:
-        engine = MemoryEngine()
+        chat = ChatService()
 
-        user_id = 2
-        prompt = "What programming languages are mentioned in my resume?"
-
-        # ---------------------------------------
-        # Prepare prompt
-        # ---------------------------------------
-
-        prepared_prompt = engine._prepare_prompt(
-            user_id=user_id,
-            prompt=prompt,
-        )
-
-        # ---------------------------------------
-        # Retrieve memories
-        # ---------------------------------------
-
-        memory = engine._retrieve_memories(
+        result = chat.chat(
             db=db,
-            user_id=user_id,
-            prepared_prompt=prepared_prompt,
-        )
-
-        # ---------------------------------------
-        # Optimize memories
-        # ---------------------------------------
-
-        optimized_memory = engine._optimize_memory(
-            memory=memory,
-        )
-
-        # ---------------------------------------
-        # Build unified memory
-        # ---------------------------------------
-
-        unified_memory = engine._build_unified_memory(
-            optimized_memory=optimized_memory,
-        )
-
-        # ---------------------------------------
-        # Select memories
-        # ---------------------------------------
-
-        selected_memory = engine._select_memory(
-            unified_memory=unified_memory,
-        )
-
-        # ---------------------------------------
-        # Build final context
-        # ---------------------------------------
-
-        context = engine._build_context(
-            prepared_prompt=prepared_prompt,
-            selected_memory=selected_memory,
+            user_id=2,
+            prompt="Explain my programming skills from my resume.",
         )
 
         print("\n" + "=" * 60)
         print("SELECTED MEMORY")
         print("=" * 60)
 
-        for item in selected_memory:
+        for item in result["selected_memory"]:
             print(
                 item["memory_type"],
                 "->",
                 item["score"],
             )
 
-            if item["memory_type"] == "document":
-                print("FILE:", item["filename"])
-                print("CHUNK:")
-                print(item["chunk"])
-                print("-" * 60)
+            if item["memory_type"] == "preference":
+                print(
+                    "PREFERENCE:",
+                    item.get("key"),
+                    "=",
+                    item.get("value"),
+                )
+
+            elif item["memory_type"] == "document":
+                print(
+                    "FILE:",
+                    item.get("filename"),
+                )
+                print(
+                    "CHUNK:\n",
+                    item.get("chunk"),
+                )
+
+            print("-" * 60)
 
         print("\n" + "=" * 60)
         print("FINAL CONTEXT")
         print("=" * 60)
-        print(context)
+        print(result["context"])
 
+        # Gemini intentionally skipped while testing memory pipeline
         print("\n" + "=" * 60)
         print("GEMINI CALL SKIPPED")
         print("=" * 60)

@@ -16,6 +16,7 @@ from memory.document_memory import DocumentMemory
 from memory.unified_context_manager import UnifiedContextManager
 from memory.memory_selector import MemorySelector
 from llm.llm_manager import LLMManager
+from memory.memory_usage_tracker import MemoryUsageTracker
 
 
 class MemoryEngine:
@@ -32,6 +33,7 @@ class MemoryEngine:
         self.unified_context_manager = UnifiedContextManager()
         self.memory_selector = MemorySelector()
         self.llm_manager = LLMManager()
+        self.memory_usage_tracker = MemoryUsageTracker()
 
     def _prepare_prompt(
         self,
@@ -268,14 +270,19 @@ class MemoryEngine:
             unified_memory=unified_memory,
         )
 
+        # Track only memories actually selected for the final context
+        self.memory_usage_tracker.track(
+            db=db,
+            selected_memory=selected_memory,
+        )
+
         context = self._build_context(
             prepared_prompt=prepared_prompt,
             selected_memory=selected_memory,
         )
 
-        ai_response = self._generate_response(
-            context=context,
-        )
+        # TEMPORARY: Skip Gemini during memory pipeline testing
+        ai_response = "[GEMINI CALL SKIPPED]"
 
         return {
             "prompt": prepared_prompt,

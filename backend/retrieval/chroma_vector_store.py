@@ -153,6 +153,26 @@ class ChromaVectorStore:
         Number of stored conversation messages.
         """
 
+    def reset_message_collection(self):
+        """
+        Delete and recreate only the message-memory collection.
+
+        Document and conversation collections are not affected.
+        """
+
+        try:
+            self.client.delete_collection(
+                name="message_memory"
+            )
+        except Exception:
+            pass
+
+        self.message_collection = (
+            self.client.get_or_create_collection(
+                name="message_memory"
+            )
+        )
+
         # ======================================================
     # CONVERSATION MEMORY
     # ======================================================

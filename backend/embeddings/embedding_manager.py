@@ -62,9 +62,14 @@ class EmbeddingManager:
         conversation_id,
         user_id,
         role,
+        message_id=None,
     ):
         """
         Generate an embedding for a single conversation message.
+
+        Stores the SQLite message ID in ChromaDB metadata
+        so semantic memories can be mapped back to the
+        original database record.
         """
 
         embedding = self.embed_text(message)
@@ -73,14 +78,12 @@ class EmbeddingManager:
             "text": message,
             "embedding": embedding,
             "metadata": {
+                "message_id": message_id,
                 "conversation_id": conversation_id,
                 "user_id": user_id,
                 "role": role,
             },
         }
-        # =====================================================
-    # CONVERSATION EMBEDDINGS
-    # =====================================================
 
     def embed_conversation(
         self,

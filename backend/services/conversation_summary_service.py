@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from database.models import Conversation
@@ -35,7 +36,9 @@ class ConversationSummaryService:
 
         conversation = (
             db.query(Conversation)
-            .filter(Conversation.id == conversation_id)
+            .filter(
+                Conversation.id == conversation_id
+            )
             .first()
         )
 
@@ -59,7 +62,10 @@ class ConversationSummaryService:
 
         latest_message = messages[-1]
 
-        return latest_message.timestamp > conversation.summary_updated
+        return (
+            latest_message.timestamp
+            > conversation.summary_updated
+        )
 
     def get_or_refresh_summary(
         self,
@@ -67,41 +73,61 @@ class ConversationSummaryService:
         conversation_id: int,
     ) -> str:
         """
-        Return the existing conversation summary if it is fresh.
+        Return the existing conversation summary.
 
-        If the summary does not exist or has become stale,
-        generate and store a new summary.
+        TEMPORARY PHASE 25 TEST MODE:
+
+        Gemini summary generation is disabled so the
+        adaptive-memory pipeline can be tested without
+        consuming Gemini API quota.
+
+        If a summary already exists, return it.
+
+        If no summary exists, use the conversation title
+        as a temporary fallback.
         """
 
         conversation = (
             db.query(Conversation)
-            .filter(Conversation.id == conversation_id)
+            .filter(
+                Conversation.id == conversation_id
+            )
             .first()
         )
 
         if conversation is None:
             raise ValueError("Conversation not found.")
 
-        if self.is_summary_stale(
-            db=db,
-            conversation_id=conversation_id,
-        ):
-            return self.generate_summary(
-                db=db,
-                conversation_id=conversation_id,
-            )
+        # --------------------------------------------------
+        # TEMPORARY: Skip Gemini summary generation
+        # during Phase 25 testing.
+        # --------------------------------------------------
 
-        return conversation.summary
+        if conversation.summary:
+            return conversation.summary
+
+        # Lightweight fallback when no summary exists.
+        return conversation.title
 
     def generate_summary(
         self,
         db: Session,
         conversation_id: int,
     ) -> str:
+        """
+        Generate and persist a conversation summary.
+
+        NOTE:
+        This method is intentionally preserved so normal
+        Gemini-based lazy summarization can be restored
+        after Phase 25 testing.
+        """
 
         conversation = (
             db.query(Conversation)
-            .filter(Conversation.id == conversation_id)
+            .filter(
+                Conversation.id == conversation_id
+            )
             .first()
         )
 
@@ -135,13 +161,17 @@ class ConversationSummaryService:
         db.commit()
         db.refresh(conversation)
 
-        embedded = self.embedding_manager.embed_conversation(
-            title=conversation.title,
-            summary=summary,
-            conversation_id=conversation.id,
-            user_id=conversation.user_id,
+        embedded = (
+            self.embedding_manager.embed_conversation(
+                title=conversation.title,
+                summary=summary,
+                conversation_id=conversation.id,
+                user_id=conversation.user_id,
+            )
         )
 
-        self.vector_store.update_conversation(embedded)
+        self.vector_store.update_conversation(
+            embedded
+        )
 
         return summary
