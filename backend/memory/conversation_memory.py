@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database.models import Conversation
 from embeddings.embedding_manager import EmbeddingManager
 from retrieval.chroma_vector_store import ChromaVectorStore
+from services.conversation_summary_service import ConversationSummaryService
 
 
 class ConversationMemory:
@@ -13,6 +14,7 @@ class ConversationMemory:
     def __init__(self):
         self.embedding_manager = EmbeddingManager()
         self.vector_store = ChromaVectorStore()
+        self.summary_service = ConversationSummaryService()
 
     def get_recent_conversations(
         self,
@@ -53,10 +55,17 @@ class ConversationMemory:
                 )
 
                 if conversation:
+
+                    summary = self.summary_service.get_or_refresh_summary(
+                        db=db,
+                        conversation_id=conversation.id,
+                    )
+
                     conversations.append(
                         {
                             "id": conversation.id,
                             "title": conversation.title,
+                            "summary": summary,
                             "created_at": conversation.created_at.isoformat(),
                         }
                     )

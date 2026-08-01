@@ -47,8 +47,15 @@ class ContextBuilder:
                 )
 
                 context.append(
-                    memory["title"]
+                    f"Title: {memory['title']}"
                 )
+
+                summary = memory.get("summary")
+
+                if summary:
+                    context.append(
+                        f"Summary: {summary}"
+                    )
 
             elif memory_type == "message":
 

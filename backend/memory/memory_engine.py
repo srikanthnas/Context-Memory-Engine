@@ -160,9 +160,8 @@ class MemoryEngine:
         conversation_map = {}
 
         for conversation in (
-            recent_conversations + semantic_conversations
+            semantic_conversations + recent_conversations
         ):
-
             key = conversation.get("id")
 
             if key not in conversation_map:
