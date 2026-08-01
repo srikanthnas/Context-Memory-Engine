@@ -6,10 +6,10 @@ Memory Engine Configuration
 MIN_MEMORY_SCORE = 0.60
 
 # Maximum memories passed to the LLM.
-MAX_MEMORY_ITEMS = 6
+MAX_MEMORY_ITEMS = 7
 
 # Maximum memories of each type.
-MAX_DOCUMENTS = 2
+MAX_DOCUMENTS = 3
 MAX_CONVERSATIONS = 2
 MAX_MESSAGES = 2
 MAX_PREFERENCES = 1
