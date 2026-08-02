@@ -25,6 +25,7 @@ from memory.memory_consolidator import MemoryConsolidator
 from memory.image_memory import ImageMemoryManager
 from memory.user_profile_extractor import UserProfileExtractor
 from services.preference_service import PreferenceService
+from memory.memory_command_parser import MemoryCommandParser
 
 
 class MemoryEngine:
@@ -50,6 +51,7 @@ class MemoryEngine:
         self.memory_consolidator = MemoryConsolidator()
         self.user_profile_extractor = UserProfileExtractor()
         self.preference_service = PreferenceService()
+        self.memory_command_parser = MemoryCommandParser()
 
     def _prepare_prompt(
         self,
@@ -101,6 +103,85 @@ class MemoryEngine:
         )
 
         return saved_facts
+
+    def _handle_memory_command(
+        self,
+        db: Session,
+        user_id: int,
+        prompt: str,
+    ):
+        """
+        Handle explicit user memory-control commands.
+
+        Supported actions:
+        - remember
+        - forget
+
+        Returns None when the prompt is not an explicit
+        memory command.
+        """
+
+        command = self.memory_command_parser.parse(
+            prompt
+        )
+
+        if command is None:
+            return None
+
+        action = command.get("action")
+        key = command.get("key")
+
+        # ==================================================
+        # REMEMBER
+        # ==================================================
+
+        if action == "remember":
+
+            value = command.get("value")
+
+            if not key or not value:
+                return None
+
+            saved = (
+                self.preference_service.upsert_profile_fact(
+                    db=db,
+                    user_id=user_id,
+                    key=key,
+                    value=value,
+                )
+            )
+
+            return {
+                "action": "remember",
+                "key": saved.key,
+                "value": saved.value,
+                "success": True,
+            }
+
+        # ==================================================
+        # FORGET
+        # ==================================================
+
+        if action == "forget":
+
+            if not key:
+                return None
+
+            removed = (
+                self.preference_service.forget_profile_fact(
+                    db=db,
+                    user_id=user_id,
+                    key=key,
+                )
+            )
+
+            return {
+                "action": "forget",
+                "key": key,
+                "success": removed,
+            }
+
+        return None
 
     def _retrieve_memories(
         self,
@@ -436,15 +517,17 @@ class MemoryEngine:
 
         Pipeline:
         1. Prepare prompt
-        2. Retrieve memories
-        3. Resolve factual conflicts
-        4. Consolidate duplicate memories
-        5. Optimize memories
-        6. Build unified memory
-        7. Select relevant memories
-        8. Track memory usage
-        9. Build final context
-        10. Generate LLM response
+        2. Handle explicit memory command
+        3. Extract automatic profile facts
+        4. Retrieve memories
+        5. Resolve factual conflicts
+        6. Consolidate duplicate memories
+        7. Optimize memories
+        8. Build unified memory
+        9. Select relevant memories
+        10. Track memory usage
+        11. Build final context
+        12. Generate LLM response
         """
 
         # ==================================================
@@ -452,22 +535,42 @@ class MemoryEngine:
         # ==================================================
 
         prepared_prompt = self._prepare_prompt(
-    user_id=user_id,
-    prompt=prompt,
-)
+            user_id=user_id,
+            prompt=prompt,
+        )
 
-# ==================================================
-# PERSIST STABLE USER PROFILE FACTS
-# ==================================================
+        # ==================================================
+        # 2. HANDLE EXPLICIT MEMORY COMMAND
+        # ==================================================
 
-        profile_updates = self._update_user_profile(
+        memory_command = self._handle_memory_command(
             db=db,
             user_id=user_id,
             prompt=prepared_prompt["prompt"],
         )
 
         # ==================================================
-        # RETRIEVE MEMORY
+        # 3. AUTOMATIC PROFILE EXTRACTION
+        # ==================================================
+        #
+        # Explicit memory commands must not also pass
+        # through automatic Phase 32 profile extraction.
+        # ==================================================
+
+        if memory_command is None:
+
+            profile_updates = self._update_user_profile(
+                db=db,
+                user_id=user_id,
+                prompt=prepared_prompt["prompt"],
+            )
+
+        else:
+
+            profile_updates = []
+
+        # ==================================================
+        # 4. RETRIEVE MEMORY
         # ==================================================
 
         memory = self._retrieve_memories(
@@ -477,7 +580,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 3. RESOLVE FACTUAL CONFLICTS
+        # 5. RESOLVE FACTUAL CONFLICTS
         # ==================================================
 
         resolved_memory = self._resolve_memory_conflicts(
@@ -485,7 +588,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 4. CONSOLIDATE MEMORY
+        # 6. CONSOLIDATE MEMORY
         # ==================================================
 
         consolidated_memory = self._consolidate_memory(
@@ -493,7 +596,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 5. OPTIMIZE MEMORY
+        # 7. OPTIMIZE MEMORY
         # ==================================================
 
         optimized_memory = self._optimize_memory(
@@ -501,7 +604,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 6. BUILD UNIFIED MEMORY
+        # 8. BUILD UNIFIED MEMORY
         # ==================================================
 
         unified_memory = self._build_unified_memory(
@@ -509,7 +612,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 7. SELECT MEMORY
+        # 9. SELECT MEMORY
         # ==================================================
 
         selected_memory = self._select_memory(
@@ -517,7 +620,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 8. TRACK MEMORY USAGE
+        # 10. TRACK MEMORY USAGE
         # ==================================================
 
         self.memory_usage_tracker.track(
@@ -526,7 +629,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 9. BUILD FINAL CONTEXT
+        # 11. BUILD FINAL CONTEXT
         # ==================================================
 
         context = self._build_context(
@@ -535,7 +638,7 @@ class MemoryEngine:
         )
 
         # ==================================================
-        # 10. GENERATE RESPONSE
+        # 12. GENERATE RESPONSE
         # ==================================================
 
         ai_response = self._generate_response(
@@ -549,6 +652,8 @@ class MemoryEngine:
         return {
             "prompt": prepared_prompt,
 
+            "memory_command": memory_command,
+
             "profile_updates": [
                 {
                     "id": item.id,
@@ -558,10 +663,10 @@ class MemoryEngine:
                 for item in profile_updates
             ],
 
-                "conversation_memory": memory.get(
-                    "conversations",
-                    [],
-                ),
+            "conversation_memory": memory.get(
+                "conversations",
+                [],
+            ),
 
             "message_memory": memory.get(
                 "messages",

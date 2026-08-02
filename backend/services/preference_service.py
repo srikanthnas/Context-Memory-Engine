@@ -57,20 +57,6 @@ class PreferenceService:
     ) -> Preference:
         """
         Create or update a persistent user-profile fact.
-
-        A user should have only one active value for
-        each profile key.
-
-        Example:
-
-        location = Bengaluru
-
-        Later:
-
-        location = Mysuru
-
-        The existing row is updated instead of creating
-        another location row.
         """
 
         existing = (
@@ -115,13 +101,6 @@ class PreferenceService:
     ):
         """
         Save multiple extracted profile facts.
-
-        Each fact must contain:
-
-        {
-            "key": "...",
-            "value": "..."
-        }
         """
 
         saved = []
@@ -146,3 +125,35 @@ class PreferenceService:
             )
 
         return saved
+
+    @staticmethod
+    def forget_profile_fact(
+        db: Session,
+        user_id: int,
+        key: str,
+    ) -> bool:
+        """
+        Remove a persistent user-profile fact.
+
+        Returns True when a matching memory was removed.
+        Returns False when no matching memory exists.
+        """
+
+        preferences = (
+            db.query(Preference)
+            .filter(
+                Preference.user_id == user_id,
+                Preference.key == key,
+            )
+            .all()
+        )
+
+        if not preferences:
+            return False
+
+        for preference in preferences:
+            db.delete(preference)
+
+        db.commit()
+
+        return True
