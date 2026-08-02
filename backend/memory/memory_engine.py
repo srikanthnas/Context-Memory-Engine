@@ -21,6 +21,7 @@ from memory.memory_conflict_resolver import MemoryConflictResolver
 from memory.memory_conflict_detector import MemoryConflictDetector
 from memory.memory_conflict_confirmer import MemoryConflictConfirmer
 from memory.factual_conflict_resolver import FactualConflictResolver
+from memory.memory_consolidator import MemoryConsolidator
 
 
 class MemoryEngine:
@@ -42,6 +43,7 @@ class MemoryEngine:
         self.memory_conflict_detector = MemoryConflictDetector()
         self.memory_conflict_confirmer = MemoryConflictConfirmer()
         self.factual_conflict_resolver = FactualConflictResolver()
+        self.memory_consolidator = MemoryConsolidator()
 
     def _prepare_prompt(
         self,
@@ -290,6 +292,38 @@ class MemoryEngine:
 
         return resolved_memory
 
+    def _consolidate_memory(
+        self,
+        memory: dict,
+    ):
+        """
+        Consolidate redundant active-context memories.
+
+        Historical memories remain unchanged in storage.
+
+        Phase 29 consolidation currently applies to
+        message memory because messages may contain
+        repeated factual information across retrieval
+        sources.
+        """
+
+        consolidated_memory = dict(memory)
+
+        consolidated_messages = (
+            self.memory_consolidator.consolidate(
+                memories=memory.get(
+                    "messages",
+                    [],
+                )
+            )
+        )
+
+        consolidated_memory["messages"] = (
+            consolidated_messages
+        )
+
+        return consolidated_memory
+
     def _optimize_memory(
         self,
         memory: dict,
@@ -381,8 +415,12 @@ class MemoryEngine:
             memory=memory,
         )
 
-        optimized_memory = self._optimize_memory(
+        consolidated_memory = self._consolidate_memory(
             memory=resolved_memory,
+        )
+
+        optimized_memory = self._optimize_memory(
+            memory=consolidated_memory,
         )
 
         unified_memory = self._build_unified_memory(
@@ -414,6 +452,7 @@ class MemoryEngine:
             "preference_memory": memory["preferences"],
             "document_memory": memory["documents"],
             "resolved_memory": resolved_memory,
+            "consolidated_memory": consolidated_memory,
             "optimized_memory": optimized_memory,
             "unified_memory": unified_memory,
             "selected_memory": selected_memory,
