@@ -22,6 +22,7 @@ from memory.memory_conflict_detector import MemoryConflictDetector
 from memory.memory_conflict_confirmer import MemoryConflictConfirmer
 from memory.factual_conflict_resolver import FactualConflictResolver
 from memory.memory_consolidator import MemoryConsolidator
+from memory.image_memory import ImageMemoryManager
 
 
 class MemoryEngine:
@@ -35,6 +36,7 @@ class MemoryEngine:
         self.context_builder = ContextBuilder()
         self.context_optimizer = ContextOptimizer()
         self.document_memory = DocumentMemory()
+        self.image_memory = ImageMemoryManager()
         self.unified_context_manager = UnifiedContextManager()
         self.memory_selector = MemorySelector()
         self.llm_manager = LLMManager()
@@ -106,6 +108,12 @@ class MemoryEngine:
             query=prepared_prompt["prompt"],
         )
 
+        images = self.image_memory.get_images(
+            db=db,
+            user_id=user_id,
+            query=prepared_prompt["prompt"],
+        )
+
         recent_messages = []
 
         if conversations:
@@ -129,6 +137,7 @@ class MemoryEngine:
             "preferences": preferences,
             "documents": documents,
             "messages": latest_messages,
+            "images": images,
         }
 
     def _deduplicate_messages(
@@ -188,29 +197,46 @@ class MemoryEngine:
         """
         Resolve conflicts before memory optimization.
 
-        Handles:
-        1. Preference conflicts.
-        2. Candidate factual conflict detection.
-        3. Conservative conflict confirmation.
-        4. Recency-aware factual resolution.
-
-        Historical memories remain unchanged in storage.
-        Only the active context is modified.
+        Conflict resolution may modify supported memory
+        categories, but unrelated memory sources such as
+        images must remain preserved.
         """
 
-        # ---------------------------------------------
-        # Resolve structured preference conflicts
-        # ---------------------------------------------
+        # ==================================================
+        # PRESERVE ALL RETRIEVED MEMORY SOURCES
+        # ==================================================
 
-        resolved_memory = (
+        original_memory = dict(memory)
+
+        # ==================================================
+        # STRUCTURED MEMORY CONFLICT RESOLUTION
+        # ==================================================
+
+        conflict_result = (
             self.memory_conflict_resolver.resolve(
                 memory
             )
         )
 
-        # ---------------------------------------------
-        # Detect possible factual conflicts
-        # ---------------------------------------------
+        # Start from the original complete memory dictionary
+        # so newly added memory types such as images cannot
+        # disappear during conflict resolution.
+
+        resolved_memory = dict(
+            original_memory
+        )
+
+        # Merge whatever categories the conflict resolver
+        # actually changed.
+
+        if conflict_result:
+            resolved_memory.update(
+                conflict_result
+            )
+
+        # ==================================================
+        # DETECT POSSIBLE FACTUAL MESSAGE CONFLICTS
+        # ==================================================
 
         detected = (
             self.memory_conflict_detector.detect(
@@ -223,9 +249,9 @@ class MemoryEngine:
             [],
         )
 
-        # ---------------------------------------------
-        # Confirm safe conflicts
-        # ---------------------------------------------
+        # ==================================================
+        # CONFIRM SAFE CONFLICTS
+        # ==================================================
 
         confirmed_conflicts = (
             self.memory_conflict_confirmer.confirm(
@@ -233,10 +259,9 @@ class MemoryEngine:
             )
         )
 
-
-        # ---------------------------------------------
-        # Resolve confirmed conflicts
-        # ---------------------------------------------
+        # ==================================================
+        # RESOLVE CONFIRMED MESSAGE CONFLICTS
+        # ==================================================
 
         resolved_messages = (
             self.factual_conflict_resolver.resolve(
@@ -244,7 +269,9 @@ class MemoryEngine:
                     "messages",
                     [],
                 ),
-                confirmed_conflicts=confirmed_conflicts,
+                confirmed_conflicts=(
+                    confirmed_conflicts
+                ),
             )
         )
 
@@ -260,13 +287,6 @@ class MemoryEngine:
     ):
         """
         Consolidate redundant active-context memories.
-
-        Historical memories remain unchanged in storage.
-
-        Phase 29 consolidation currently applies to
-        message memory because messages may contain
-        repeated factual information across retrieval
-        sources.
         """
 
         consolidated_memory = dict(memory)
@@ -291,14 +311,31 @@ class MemoryEngine:
         memory: dict,
     ):
         """
-        Optimize retrieved memories before building unified memory.
+        Optimize retrieved memory before unified
+        context construction.
         """
 
         return self.context_optimizer.optimize(
-            conversations=memory["conversations"],
-            messages=memory["messages"],
-            preferences=memory["preferences"],
-            documents=memory["documents"],
+            conversations=memory.get(
+                "conversations",
+                [],
+            ),
+            messages=memory.get(
+                "messages",
+                [],
+            ),
+            preferences=memory.get(
+                "preferences",
+                [],
+            ),
+            documents=memory.get(
+                "documents",
+                [],
+            ),
+            images=memory.get(
+                "images",
+                [],
+            ),
         )
 
     def _build_unified_memory(
@@ -314,6 +351,7 @@ class MemoryEngine:
             messages=optimized_memory["messages"],
             preferences=optimized_memory["preferences"],
             documents=optimized_memory["documents"],
+            images=optimized_memory.get("images", []),
         )
 
     def _select_memory(
@@ -360,12 +398,32 @@ class MemoryEngine:
     ):
         """
         Main orchestration pipeline for the Context Memory Engine.
+
+        Pipeline:
+        1. Prepare prompt
+        2. Retrieve memories
+        3. Resolve factual conflicts
+        4. Consolidate duplicate memories
+        5. Optimize memories
+        6. Build unified memory
+        7. Select relevant memories
+        8. Track memory usage
+        9. Build final context
+        10. Generate LLM response
         """
+
+        # ==================================================
+        # 1. PREPARE PROMPT
+        # ==================================================
 
         prepared_prompt = self._prepare_prompt(
             user_id=user_id,
             prompt=prompt,
         )
+
+        # ==================================================
+        # 2. RETRIEVE MEMORY
+        # ==================================================
 
         memory = self._retrieve_memories(
             db=db,
@@ -373,52 +431,139 @@ class MemoryEngine:
             prepared_prompt=prepared_prompt,
         )
 
+        # ==================================================
+        # 3. RESOLVE FACTUAL CONFLICTS
+        # ==================================================
+
         resolved_memory = self._resolve_memory_conflicts(
             memory=memory,
         )
+
+        # ==================================================
+        # 4. CONSOLIDATE MEMORY
+        # ==================================================
 
         consolidated_memory = self._consolidate_memory(
             memory=resolved_memory,
         )
 
+        # ==================================================
+        # 5. OPTIMIZE MEMORY
+        # ==================================================
+
         optimized_memory = self._optimize_memory(
             memory=consolidated_memory,
         )
+
+        # ==================================================
+        # TEMPORARY PHASE 31 DEBUG
+        # ==================================================
+
+        print(
+            "RAW:",
+            len(memory.get("images", [])),
+        )
+
+        print(
+            "RESOLVED:",
+            len(resolved_memory.get("images", [])),
+        )
+
+        print(
+            "CONSOLIDATED:",
+            len(consolidated_memory.get("images", [])),
+        )
+
+        print(
+            "OPTIMIZED:",
+            len(optimized_memory.get("images", [])),
+        )
+
+        # ==================================================
+        # 6. BUILD UNIFIED MEMORY
+        # ==================================================
 
         unified_memory = self._build_unified_memory(
             optimized_memory=optimized_memory,
         )
 
+        # ==================================================
+        # 7. SELECT MEMORY
+        # ==================================================
+
         selected_memory = self._select_memory(
             unified_memory=unified_memory,
         )
 
-        # Track only memories actually selected for the final context
+        # ==================================================
+        # 8. TRACK MEMORY USAGE
+        # ==================================================
+
         self.memory_usage_tracker.track(
             db=db,
             selected_memory=selected_memory,
         )
+
+        # ==================================================
+        # 9. BUILD FINAL CONTEXT
+        # ==================================================
 
         context = self._build_context(
             prepared_prompt=prepared_prompt,
             selected_memory=selected_memory,
         )
 
+        # ==================================================
+        # 10. GENERATE RESPONSE
+        # ==================================================
+
         ai_response = self._generate_response(
             context=context,
         )
 
+        # ==================================================
+        # RETURN PIPELINE RESULT
+        # ==================================================
+
         return {
             "prompt": prepared_prompt,
-            "conversation_memory": memory["conversations"],
-            "message_memory": memory["messages"],
-            "preference_memory": memory["preferences"],
-            "document_memory": memory["documents"],
+
+            "conversation_memory": memory.get(
+                "conversations",
+                [],
+            ),
+
+            "message_memory": memory.get(
+                "messages",
+                [],
+            ),
+
+            "preference_memory": memory.get(
+                "preferences",
+                [],
+            ),
+
+            "document_memory": memory.get(
+                "documents",
+                [],
+            ),
+
+            "image_memory": memory.get(
+                "images",
+                [],
+            ),
+
             "resolved_memory": resolved_memory,
+
             "consolidated_memory": consolidated_memory,
+
             "optimized_memory": optimized_memory,
+
             "unified_memory": unified_memory,
+
             "selected_memory": selected_memory,
+
             "context": context,
+
             "ai_response": ai_response,
         }

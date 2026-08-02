@@ -1,7 +1,8 @@
 """
 Unified Context Manager
 
-Combines memories from all memory sources into a single ranked list.
+Combines memories from all memory sources into
+a single ranked list.
 """
 
 from memory.memory_ranker import MemoryRanker
@@ -18,6 +19,7 @@ class UnifiedContextManager:
         messages,
         preferences,
         documents,
+        images=None,
     ):
 
         unified_memory = []
@@ -35,7 +37,9 @@ class UnifiedContextManager:
                 memory=preference,
             )
 
-            unified_memory.append(preference)
+            unified_memory.append(
+                preference
+            )
 
         # -------------------------------
         # Conversations
@@ -43,15 +47,21 @@ class UnifiedContextManager:
 
         for conversation in conversations:
 
-            conversation["memory_type"] = "conversation"
+            conversation[
+                "memory_type"
+            ] = "conversation"
 
             conversation["score"] = MemoryRanker.rank(
                 memory_type="conversation",
-                timestamp=conversation.get("created_at"),
+                timestamp=conversation.get(
+                    "created_at"
+                ),
                 memory=conversation,
             )
 
-            unified_memory.append(conversation)
+            unified_memory.append(
+                conversation
+            )
 
         # -------------------------------
         # Messages
@@ -62,12 +72,17 @@ class UnifiedContextManager:
             message["memory_type"] = "message"
 
             message["score"] = MemoryRanker.rank(
-            memory_type="message",
-            timestamp=message.get("created_at"),
-            memory=message,
-        )
+                memory_type="message",
+                timestamp=(
+                    message.get("timestamp")
+                    or message.get("created_at")
+                ),
+                memory=message,
+            )
 
-            unified_memory.append(message)
+            unified_memory.append(
+                message
+            )
 
         # -------------------------------
         # Documents
@@ -77,16 +92,43 @@ class UnifiedContextManager:
 
             document["memory_type"] = "document"
 
-            semantic = document.get("similarity", 1.0)
+            semantic = document.get(
+                "similarity",
+                1.0,
+            )
 
             document["score"] = MemoryRanker.rank(
                 memory_type="document",
                 semantic_score=semantic,
-                timestamp=document.get("created_at"),
+                timestamp=document.get(
+                    "created_at"
+                ),
                 memory=document,
-)
+            )
 
-            unified_memory.append(document)
+            unified_memory.append(
+                document
+            )
+
+        # -------------------------------
+        # Images
+        # -------------------------------
+
+        for image in images or []:
+
+            image["memory_type"] = "image"
+
+            # Keep image scoring simple in Phase 31.
+            #
+            # Image retrieval has already established
+            # relevance. We provide a stable score so
+            # image memories participate in normal
+            # memory selection.
+            image["score"] = 0.80
+
+            unified_memory.append(
+                image
+            )
 
         # -------------------------------
         # Highest score first
@@ -96,9 +138,5 @@ class UnifiedContextManager:
             key=lambda item: item["score"],
             reverse=True,
         )
-
-        print("\n=== RETRIEVED CONVERSATIONS ===")
-        for c in conversations:
-            print(c)
 
         return unified_memory

@@ -5,10 +5,12 @@ class ContextOptimizer:
     """
     Optimizes memory before context construction.
 
-    Phase 28:
-    Message memories are ranked using both:
+    Message memories are ranked using:
     - Retrieval relevance
     - Decay-adjusted memory strength
+
+    Image memories are preserved when image retrieval
+    determines that they are relevant to the query.
     """
 
     def __init__(self):
@@ -20,10 +22,6 @@ class ContextOptimizer:
     ) -> float:
         """
         Calculate a final ranking score for a message.
-
-        Combines:
-        - Semantic/retrieval similarity
-        - Decay-adjusted memory strength
         """
 
         similarity = message.get(
@@ -42,10 +40,6 @@ class ContextOptimizer:
             )
         )
 
-        # Retrieval relevance remains the primary signal.
-        # Memory strength influences ranking without
-        # completely overriding semantic relevance.
-
         final_score = (
             0.70 * similarity
             + 0.30 * decay_strength
@@ -60,11 +54,6 @@ class ContextOptimizer:
     ):
         """
         Rank messages using relevance + memory decay.
-
-        The highest scoring memories are retained.
-
-        Their original order is restored afterward so
-        conversation context remains readable.
         """
 
         if not messages:
@@ -99,8 +88,6 @@ class ContextOptimizer:
                 )
             )
 
-        # Select strongest memories.
-
         ranked = sorted(
             scored_messages,
             key=lambda item: item[1][
@@ -110,8 +97,6 @@ class ContextOptimizer:
         )
 
         selected = ranked[:limit]
-
-        # Restore original order after selection.
 
         selected = sorted(
             selected,
@@ -129,6 +114,7 @@ class ContextOptimizer:
         messages: list,
         preferences: list,
         documents: list,
+        images: list = None,
     ):
         """
         Optimize retrieved memory before unified
@@ -154,6 +140,12 @@ class ContextOptimizer:
             documents
         )
 
+        # ImageMemoryManager already limits image
+        # retrieval. Keep the most recent five here.
+        optimized_images = (
+            (images or [])[:5]
+        )
+
         return {
             "conversations":
                 optimized_conversations,
@@ -166,4 +158,7 @@ class ContextOptimizer:
 
             "documents":
                 optimized_documents,
+
+            "images":
+                optimized_images,
         }

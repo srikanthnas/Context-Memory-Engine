@@ -50,7 +50,9 @@ class ContextBuilder:
                     f"Title: {memory['title']}"
                 )
 
-                summary = memory.get("summary")
+                summary = memory.get(
+                    "summary"
+                )
 
                 if summary:
                     context.append(
@@ -64,7 +66,8 @@ class ContextBuilder:
                 )
 
                 context.append(
-                    f"{memory['role']}: {memory['content']}"
+                    f"{memory['role']}: "
+                    f"{memory['content']}"
                 )
 
             elif memory_type == "document":
@@ -81,6 +84,58 @@ class ContextBuilder:
                     memory["chunk"]
                 )
 
+            elif memory_type == "image":
+
+                context.append(
+                    f"[Image | Score={memory['score']}]"
+                )
+
+                context.append(
+                    f"File: {memory['filename']}"
+                )
+
+                context.append(
+                    f"Version: "
+                    f"{memory.get('edit_version', 1)}"
+                )
+
+                description = memory.get(
+                    "description"
+                )
+
+                if description:
+                    context.append(
+                        f"Description: {description}"
+                    )
+
+                edit_instruction = memory.get(
+                    "edit_instruction"
+                )
+
+                if edit_instruction:
+                    context.append(
+                        f"Edit: {edit_instruction}"
+                    )
+
+                parent_image_id = memory.get(
+                    "parent_image_id"
+                )
+
+                if parent_image_id is not None:
+                    context.append(
+                        f"Parent Image ID: "
+                        f"{parent_image_id}"
+                    )
+
+                filepath = memory.get(
+                    "filepath"
+                )
+
+                if filepath:
+                    context.append(
+                        f"Stored Path: {filepath}"
+                    )
+
             context.append("")
 
         # ---------------------------------------
@@ -91,6 +146,10 @@ class ContextBuilder:
             "Current User Question:"
         )
 
-        context.append(prompt)
+        context.append(
+            prompt
+        )
 
-        return "\n".join(context)
+        return "\n".join(
+            context
+        )
