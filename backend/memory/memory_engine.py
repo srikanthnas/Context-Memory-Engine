@@ -233,44 +233,6 @@ class MemoryEngine:
             )
         )
 
-        print("\n" + "=" * 60)
-        print("DEBUG - CANDIDATE CONFLICTS")
-        print("=" * 60)
-
-        for conflict in candidate_conflicts:
-            print(
-                conflict["first"].get("id"),
-                "->",
-                conflict["first"].get("content"),
-            )
-            print(
-                conflict["second"].get("id"),
-                "->",
-                conflict["second"].get("content"),
-            )
-            print(
-                "Shared:",
-                conflict.get("shared_terms"),
-            )
-            print("-" * 60)
-
-
-        print("\n" + "=" * 60)
-        print("DEBUG - CONFIRMED CONFLICTS")
-        print("=" * 60)
-
-        for conflict in confirmed_conflicts:
-            print(
-                conflict["first"].get("id"),
-                "->",
-                conflict["first"].get("content"),
-            )
-            print(
-                conflict["second"].get("id"),
-                "->",
-                conflict["second"].get("content"),
-            )
-            print("-" * 60)
 
         # ---------------------------------------------
         # Resolve confirmed conflicts
@@ -442,8 +404,9 @@ class MemoryEngine:
             selected_memory=selected_memory,
         )
 
-        # TEMPORARY: Skip Gemini during memory pipeline testing
-        ai_response = "[GEMINI CALL SKIPPED]"
+        ai_response = self._generate_response(
+            context=context,
+        )
 
         return {
             "prompt": prepared_prompt,
