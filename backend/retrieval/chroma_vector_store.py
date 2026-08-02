@@ -148,10 +148,12 @@ class ChromaVectorStore:
             where=where,
         )
 
-    def message_count(self):
-        """
-        Number of stored conversation messages.
-        """
+        def message_count(self):
+            """
+            Number of stored conversation messages.
+            """
+
+            return self.message_collection.count()
 
     def reset_message_collection(self):
         """
@@ -268,3 +270,17 @@ class ChromaVectorStore:
                 embedded_conversation["metadata"]
             ],
         )
+
+        def delete_conversation(
+            self,
+            conversation_id: int,
+        ):
+            """
+            Delete a conversation embedding from ChromaDB.
+            """
+
+            vector_id = f"conversation_{conversation_id}"
+
+            self.conversation_collection.delete(
+                ids=[vector_id]
+            )

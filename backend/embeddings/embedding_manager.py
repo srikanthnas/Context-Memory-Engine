@@ -1,4 +1,5 @@
 from sentence_transformers import SentenceTransformer
+import numpy as np
 
 
 class EmbeddingManager:
@@ -108,3 +109,28 @@ class EmbeddingManager:
                 "user_id": user_id,
             },
         }
+
+    def cosine_similarity(
+        self,
+        embedding_a,
+        embedding_b,
+    ):
+        """
+        Calculate cosine similarity between two embeddings.
+        """
+
+        embedding_a = np.asarray(embedding_a)
+        embedding_b = np.asarray(embedding_b)
+
+        denominator = (
+            np.linalg.norm(embedding_a)
+            * np.linalg.norm(embedding_b)
+        )
+
+        if denominator == 0:
+            return 0.0
+
+        return float(
+            np.dot(embedding_a, embedding_b)
+            / denominator
+        )

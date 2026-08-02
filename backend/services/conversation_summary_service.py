@@ -12,6 +12,10 @@ from services.message_service import MessageService
 class ConversationSummaryService:
     """
     Generates, stores and updates conversation summaries.
+
+    If LLM-based summary generation is unavailable,
+    a deterministic fallback summary is generated so
+    the memory pipeline can continue operating.
     """
 
     def __init__(self):
@@ -25,13 +29,13 @@ class ConversationSummaryService:
         conversation_id: int,
     ) -> bool:
         """
-        Check whether the conversation summary needs to be generated
-        or refreshed.
+        Check whether the conversation summary needs
+        to be generated or refreshed.
 
         A summary is stale when:
-        1. No summary exists yet.
+        1. No summary exists.
         2. No summary timestamp exists.
-        3. A newer message exists after the last summary update.
+        3. A newer message exists after the summary.
         """
 
         conversation = (
@@ -45,7 +49,6 @@ class ConversationSummaryService:
         if conversation is None:
             raise ValueError("Conversation not found.")
 
-        # No summary has been generated yet
         if not conversation.summary:
             return True
 
@@ -73,18 +76,10 @@ class ConversationSummaryService:
         conversation_id: int,
     ) -> str:
         """
-        Return the existing conversation summary.
+        Return the existing summary when it is fresh.
 
-        TEMPORARY PHASE 25 TEST MODE:
-
-        Gemini summary generation is disabled so the
-        adaptive-memory pipeline can be tested without
-        consuming Gemini API quota.
-
-        If a summary already exists, return it.
-
-        If no summary exists, use the conversation title
-        as a temporary fallback.
+        If the summary is missing or stale,
+        regenerate and persist it.
         """
 
         conversation = (
@@ -98,15 +93,61 @@ class ConversationSummaryService:
         if conversation is None:
             raise ValueError("Conversation not found.")
 
-        # --------------------------------------------------
-        # TEMPORARY: Skip Gemini summary generation
-        # during Phase 25 testing.
-        # --------------------------------------------------
+        if self.is_summary_stale(
+            db=db,
+            conversation_id=conversation_id,
+        ):
+            return self.generate_summary(
+                db=db,
+                conversation_id=conversation_id,
+            )
 
-        if conversation.summary:
-            return conversation.summary
+        return conversation.summary
 
-        # Lightweight fallback when no summary exists.
+    def _build_fallback_summary(
+        self,
+        conversation: Conversation,
+        messages: list,
+    ) -> str:
+        """
+        Generate a lightweight deterministic summary
+        when the LLM summarizer is unavailable.
+
+        This prevents Gemini quota/rate-limit failures
+        from breaking the memory pipeline.
+        """
+
+        user_messages = [
+            message.content.strip()
+            for message in messages
+            if (
+                message.role == "user"
+                and message.content
+                and message.content.strip()
+            )
+        ]
+
+        if user_messages:
+            # Keep the fallback concise while still
+            # representing the actual conversation.
+            latest_user_messages = user_messages[-3:]
+
+            combined = " ".join(
+                latest_user_messages
+            )
+
+            # Prevent extremely large fallback summaries.
+            max_length = 1000
+
+            if len(combined) > max_length:
+                combined = (
+                    combined[:max_length].rstrip()
+                    + "..."
+                )
+
+            return combined
+
+        # Final fallback if no user message exists.
         return conversation.title
 
     def generate_summary(
@@ -117,10 +158,15 @@ class ConversationSummaryService:
         """
         Generate and persist a conversation summary.
 
-        NOTE:
-        This method is intentionally preserved so normal
-        Gemini-based lazy summarization can be restored
-        after Phase 25 testing.
+        Primary path:
+            LLM-generated summary.
+
+        Fallback path:
+            Deterministic summary generated from
+            conversation messages.
+
+        Both paths persist the summary in SQLite and
+        update the conversation embedding in ChromaDB.
         """
 
         conversation = (
@@ -150,16 +196,59 @@ class ConversationSummaryService:
             for message in messages
         ]
 
-        summary = self.summarizer.summarize(
-            title=conversation.title,
-            messages=message_data,
-        )
+        # ==================================================
+        # Attempt normal LLM summarization
+        # ==================================================
+
+        try:
+
+            summary = self.summarizer.summarize(
+                title=conversation.title,
+                messages=message_data,
+            )
+
+            if not summary or not summary.strip():
+                raise ValueError(
+                    "LLM returned an empty summary."
+                )
+
+            summary = summary.strip()
+
+        except Exception as error:
+
+            print(
+                "\nWARNING: LLM summary generation failed."
+            )
+
+            print(
+                "Using deterministic fallback summary."
+            )
+
+            print(
+                f"Reason: {type(error).__name__}: {error}"
+            )
+
+            summary = self._build_fallback_summary(
+                conversation=conversation,
+                messages=messages,
+            )
+
+        # ==================================================
+        # Persist summary in SQLite
+        # ==================================================
 
         conversation.summary = summary
-        conversation.summary_updated = datetime.utcnow()
+
+        conversation.summary_updated = (
+            datetime.utcnow()
+        )
 
         db.commit()
         db.refresh(conversation)
+
+        # ==================================================
+        # Update conversation embedding in ChromaDB
+        # ==================================================
 
         embedded = (
             self.embedding_manager.embed_conversation(
