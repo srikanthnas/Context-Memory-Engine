@@ -23,6 +23,8 @@ from memory.memory_conflict_confirmer import MemoryConflictConfirmer
 from memory.factual_conflict_resolver import FactualConflictResolver
 from memory.memory_consolidator import MemoryConsolidator
 from memory.image_memory import ImageMemoryManager
+from memory.user_profile_extractor import UserProfileExtractor
+from services.preference_service import PreferenceService
 
 
 class MemoryEngine:
@@ -46,6 +48,8 @@ class MemoryEngine:
         self.memory_conflict_confirmer = MemoryConflictConfirmer()
         self.factual_conflict_resolver = FactualConflictResolver()
         self.memory_consolidator = MemoryConsolidator()
+        self.user_profile_extractor = UserProfileExtractor()
+        self.preference_service = PreferenceService()
 
     def _prepare_prompt(
         self,
@@ -66,6 +70,37 @@ class MemoryEngine:
         print("prepared_prompt:", prepared_prompt)
 
         return prepared_prompt
+
+    def _update_user_profile(
+        self,
+        db: Session,
+        user_id: int,
+        prompt: str,
+    ):
+        """
+        Extract and persist stable user-profile facts
+        from the current user prompt.
+
+        Existing facts with the same key are updated
+        instead of duplicated.
+        """
+
+        facts = self.user_profile_extractor.extract(
+            prompt
+        )
+
+        if not facts:
+            return []
+
+        saved_facts = (
+            self.preference_service.save_profile_facts(
+                db=db,
+                user_id=user_id,
+                facts=facts,
+            )
+        )
+
+        return saved_facts
 
     def _retrieve_memories(
         self,
@@ -417,12 +452,22 @@ class MemoryEngine:
         # ==================================================
 
         prepared_prompt = self._prepare_prompt(
+    user_id=user_id,
+    prompt=prompt,
+)
+
+# ==================================================
+# PERSIST STABLE USER PROFILE FACTS
+# ==================================================
+
+        profile_updates = self._update_user_profile(
+            db=db,
             user_id=user_id,
-            prompt=prompt,
+            prompt=prepared_prompt["prompt"],
         )
 
         # ==================================================
-        # 2. RETRIEVE MEMORY
+        # RETRIEVE MEMORY
         # ==================================================
 
         memory = self._retrieve_memories(
@@ -453,30 +498,6 @@ class MemoryEngine:
 
         optimized_memory = self._optimize_memory(
             memory=consolidated_memory,
-        )
-
-        # ==================================================
-        # TEMPORARY PHASE 31 DEBUG
-        # ==================================================
-
-        print(
-            "RAW:",
-            len(memory.get("images", [])),
-        )
-
-        print(
-            "RESOLVED:",
-            len(resolved_memory.get("images", [])),
-        )
-
-        print(
-            "CONSOLIDATED:",
-            len(consolidated_memory.get("images", [])),
-        )
-
-        print(
-            "OPTIMIZED:",
-            len(optimized_memory.get("images", [])),
         )
 
         # ==================================================
@@ -528,10 +549,19 @@ class MemoryEngine:
         return {
             "prompt": prepared_prompt,
 
-            "conversation_memory": memory.get(
-                "conversations",
-                [],
-            ),
+            "profile_updates": [
+                {
+                    "id": item.id,
+                    "key": item.key,
+                    "value": item.value,
+                }
+                for item in profile_updates
+            ],
+
+                "conversation_memory": memory.get(
+                    "conversations",
+                    [],
+                ),
 
             "message_memory": memory.get(
                 "messages",
