@@ -1,103 +1,89 @@
-"""
-Controlled test for adaptive memory decay.
-"""
-
 from datetime import datetime, timedelta
 
-from database.connection import SessionLocal
-from database.models import Preference
 from memory.memory_decay import MemoryDecay
 
 
 def main():
-    db = SessionLocal()
 
-    test_preference = None
+    print("\n" + "=" * 60)
+    print("PHASE 28 - MEMORY DECAY TEST")
+    print("=" * 60)
 
-    try:
-        # ---------------------------------------
-        # Create temporary old memory
-        # ---------------------------------------
+    decay = MemoryDecay()
 
-        test_preference = Preference(
-            user_id=2,
-            key="__decay_test__",
-            value="temporary",
-            importance=2.0,
-            access_count=5,
-            last_accessed=(
-                datetime.utcnow()
-                - timedelta(days=10)
-            ),
-        )
+    now = datetime.utcnow()
 
-        db.add(test_preference)
-        db.commit()
-        db.refresh(test_preference)
+    recent_memory = {
+        "importance": 1.0,
+        "access_count": 0,
+        "last_accessed": now,
+    }
 
-        print("\n" + "=" * 60)
-        print("BEFORE DECAY")
-        print("=" * 60)
+    old_memory = {
+        "importance": 1.0,
+        "access_count": 0,
+        "last_accessed": (
+            now - timedelta(days=30)
+        ),
+    }
 
-        print("ID:", test_preference.id)
-        print("Importance:", test_preference.importance)
-        print("Access Count:", test_preference.access_count)
-        print("Last Accessed:", test_preference.last_accessed)
+    frequently_used_memory = {
+        "importance": 1.0,
+        "access_count": 10,
+        "last_accessed": (
+            now - timedelta(days=30)
+        ),
+    }
 
-        # ---------------------------------------
-        # Apply decay
-        # ---------------------------------------
+    recent_score = decay.score_memory(
+        recent_memory,
+        now=now,
+    )
 
-        total_decayed = MemoryDecay.apply_decay(
-            db=db,
-        )
+    old_score = decay.score_memory(
+        old_memory,
+        now=now,
+    )
 
-        db.refresh(test_preference)
+    frequent_score = decay.score_memory(
+        frequently_used_memory,
+        now=now,
+    )
 
-        print("\n" + "=" * 60)
-        print("AFTER DECAY")
-        print("=" * 60)
+    print("\nRECENT MEMORY")
+    print("-" * 60)
+    print(f"Strength: {recent_score:.4f}")
 
-        print("Importance:", test_preference.importance)
-        print("Access Count:", test_preference.access_count)
-        print("Last Accessed:", test_preference.last_accessed)
+    print("\nOLD MEMORY")
+    print("-" * 60)
+    print(f"Strength: {old_score:.4f}")
 
-        print("\nTotal memories decayed:", total_decayed)
+    print("\nOLD BUT FREQUENTLY USED MEMORY")
+    print("-" * 60)
+    print(f"Strength: {frequent_score:.4f}")
 
-        # ---------------------------------------
-        # Verification
-        # ---------------------------------------
+    print("\n" + "=" * 60)
+    print("VALIDATION")
+    print("=" * 60)
 
-        expected_importance = 1.95
+    assert recent_score > old_score, (
+        "Old memory did not decay."
+    )
 
-        assert abs(
-            test_preference.importance
-            - expected_importance
-        ) < 0.0001, (
-            "Decay test failed: incorrect importance."
-        )
+    assert frequent_score > old_score, (
+        "Access frequency did not strengthen memory."
+    )
 
-        assert test_preference.access_count == 5, (
-            "Decay test failed: access_count changed."
-        )
+    assert old_score > 0, (
+        "Memory strength reached zero."
+    )
 
-        print("\nDECAY TEST PASSED")
+    print("\nRecent memory is stronger than old memory.")
+    print("Frequently accessed memory resists decay.")
+    print("Memory strength remains above zero.")
 
-    finally:
-
-        # Remove temporary test preference
-        if test_preference is not None:
-
-            test_preference = db.merge(
-                test_preference
-            )
-
-            db.delete(test_preference)
-            db.commit()
-
-        db.close()
+    print("\nMEMORY DECAY TEST PASSED")
 
 
 if __name__ == "__main__":
     main()
-    
