@@ -116,7 +116,8 @@ class MessageMemory:
                         "unknown",
                     ),
                     "content": document,
-                    "similarity": 1 - distance,
+                    "distance": distance,
+                    "score": 1 / (1 + distance),
                     "metadata": metadata,
                 }
             )

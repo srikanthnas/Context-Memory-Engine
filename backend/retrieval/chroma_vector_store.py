@@ -8,8 +8,9 @@ class ChromaVectorStore:
     Stores and searches embeddings using ChromaDB.
 
     Collections:
-    - document_memory : Document chunks
-    - message_memory  : Conversation messages
+    - document_memory
+    - message_memory
+    - conversation_memory
     """
 
     def __init__(self):
@@ -17,27 +18,29 @@ class ChromaVectorStore:
             path="./chroma_db"
         )
 
-        # -------------------------------
-        # Document Memory Collection
-        # -------------------------------
+        # ==================================================
+        # DOCUMENT MEMORY COLLECTION
+        # ==================================================
+
         self.document_collection = (
             self.client.get_or_create_collection(
                 name="document_memory"
             )
         )
 
-        # -------------------------------
-        # Message Memory Collection
-        # -------------------------------
+        # ==================================================
+        # MESSAGE MEMORY COLLECTION
+        # ==================================================
+
         self.message_collection = (
             self.client.get_or_create_collection(
                 name="message_memory"
             )
         )
 
-                # -------------------------------
-        # Conversation Memory Collection
-        # -------------------------------
+        # ==================================================
+        # CONVERSATION MEMORY COLLECTION
+        # ==================================================
 
         self.conversation_collection = (
             self.client.get_or_create_collection(
@@ -49,7 +52,10 @@ class ChromaVectorStore:
     # DOCUMENT MEMORY
     # ======================================================
 
-    def add_documents(self, embedded_chunks):
+    def add_documents(
+        self,
+        embedded_chunks,
+    ):
         """
         Store embedded document chunks.
         """
@@ -104,7 +110,10 @@ class ChromaVectorStore:
     # MESSAGE MEMORY
     # ======================================================
 
-    def add_messages(self, embedded_messages):
+    def add_messages(
+        self,
+        embedded_messages,
+    ):
         """
         Store embedded conversation messages.
         """
@@ -137,7 +146,7 @@ class ChromaVectorStore:
         where=None,
     ):
         """
-        Search conversation memory.
+        Search message memory.
         """
 
         return self.message_collection.query(
@@ -148,18 +157,40 @@ class ChromaVectorStore:
             where=where,
         )
 
-        def message_count(self):
-            """
-            Number of stored conversation messages.
-            """
+    def message_count(self):
+        """
+        Number of stored conversation messages.
+        """
 
-            return self.message_collection.count()
+        return self.message_collection.count()
+
+    def delete_messages_by_message_ids(
+        self,
+        message_ids,
+    ):
+        """
+        Delete message embeddings using their
+        SQLite message IDs.
+
+        This keeps ChromaDB synchronized when
+        messages are removed from SQLite.
+        """
+
+        for message_id in message_ids:
+
+            self.message_collection.delete(
+                where={
+                    "message_id": message_id
+                }
+            )
 
     def reset_message_collection(self):
         """
-        Delete and recreate only the message-memory collection.
+        Delete and recreate only the message-memory
+        collection.
 
-        Document and conversation collections are not affected.
+        Document and conversation collections
+        are not affected.
         """
 
         try:
@@ -175,7 +206,7 @@ class ChromaVectorStore:
             )
         )
 
-        # ======================================================
+    # ======================================================
     # CONVERSATION MEMORY
     # ======================================================
 
@@ -188,7 +219,10 @@ class ChromaVectorStore:
         """
 
         ids = [
-            f"conversation_{item['metadata']['conversation_id']}"
+            (
+                f"conversation_"
+                f"{item['metadata']['conversation_id']}"
+            )
             for item in embedded_conversations
         ]
 
@@ -226,15 +260,12 @@ class ChromaVectorStore:
             where=where,
         )
 
-    def conversation_count(
-        self,
-    ):
+    def conversation_count(self):
         """
         Number of stored conversations.
         """
 
         return self.conversation_collection.count()
-
 
     def update_conversation(
         self,
@@ -245,10 +276,16 @@ class ChromaVectorStore:
         """
 
         conversation_id = (
-            embedded_conversation["metadata"]["conversation_id"]
+            embedded_conversation[
+                "metadata"
+            ][
+                "conversation_id"
+            ]
         )
 
-        vector_id = f"conversation_{conversation_id}"
+        vector_id = (
+            f"conversation_{conversation_id}"
+        )
 
         # Remove previous embedding if it exists
         try:
@@ -264,23 +301,28 @@ class ChromaVectorStore:
                 embedded_conversation["text"]
             ],
             embeddings=[
-                embedded_conversation["embedding"].tolist()
+                embedded_conversation[
+                    "embedding"
+                ].tolist()
             ],
             metadatas=[
                 embedded_conversation["metadata"]
             ],
         )
 
-        def delete_conversation(
-            self,
-            conversation_id: int,
-        ):
-            """
-            Delete a conversation embedding from ChromaDB.
-            """
+    def delete_conversation(
+        self,
+        conversation_id: int,
+    ):
+        """
+        Delete a conversation embedding
+        from ChromaDB.
+        """
 
-            vector_id = f"conversation_{conversation_id}"
+        vector_id = (
+            f"conversation_{conversation_id}"
+        )
 
-            self.conversation_collection.delete(
-                ids=[vector_id]
-            )
+        self.conversation_collection.delete(
+            ids=[vector_id]
+        )
